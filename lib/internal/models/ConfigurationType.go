@@ -14,7 +14,20 @@
  * limitations under the License.
  */
 
-package constants
+package models
 
-const FEATURE_FILE = "./appconfiguration.json"
-const DEFAULT_SEGMENT_ID = "$$null$$"
+var (
+	NUMERIC string = "NUMERIC"
+	STRING  string = "STRING"
+	BOOLEAN string = "BOOLEAN"
+)
+
+func getTypeCastedValue(val interface{}, valType string) interface{} {
+	if valType == "NUMERIC" {
+		return val.(float64)
+	} else if valType == "BOOLEAN" {
+		return val.(bool)
+	} else {
+		return val.(string)
+	}
+}

@@ -23,7 +23,7 @@ func setUp() {
 	appConfiguration.EnableDebug(true)
 	appConfiguration.Init("region", "guid", "api_key")
 	appConfiguration.SetCollectionId("collectionId")
-	appConfiguration.RegisterFeaturesUpdateListener(func() {
+	appConfiguration.RegisterConfigurationUpdateListener(func() {
 		fmt.Println("Get all your features now.")
 		features := appConfiguration.GetFeatures()
 		feature := features["featureId"]
@@ -45,6 +45,21 @@ func setUp() {
 		fmt.Println("Feature Id ", feature.GetFeatureId())
 		fmt.Println("Feature Type ", feature.GetFeatureDataType())
 		fmt.Println("Feature is enabled ", feature.IsEnabled())
+
+		fmt.Println("Get all your properties now.")
+		properties := appConfiguration.GetProperties()
+		property := properties["propertyId"]
+
+		fmt.Println("Property Name ", property.GetPropertyName())
+		fmt.Println("Property Id  ", property.GetPropertyId())
+		fmt.Println("Property Type ", property.GetPropertyDataType())
+
+		fmt.Println("Get your property specific value now.")
+		property = appConfiguration.GetProperty("propertyId")
+		fmt.Println(property)
+		fmt.Println("Property Name ", property.GetPropertyName())
+		fmt.Println("Property Id  ", property.GetPropertyId())
+		fmt.Println("Property Type ", property.GetPropertyDataType())
 	})
 
 	myRouter := mux.NewRouter().StrictSlash(true)

@@ -26,12 +26,12 @@ import (
 )
 
 type AppConfiguration struct {
-	region                 string
-	guid                   string
-	apikey                 string
-	isInitialized          bool
-	isInitializedFeature   bool
-	featureHandlerInstance *FeatureHandler
+	region                       string
+	guid                         string
+	apikey                       string
+	isInitialized                bool
+	isInitializedConfig          bool
+	configurationHandlerInstance *ConfigurationHandler
 }
 
 var appConfigurationInstance *AppConfiguration
@@ -39,6 +39,7 @@ var OverrideServerHost = ""
 var log = logrus.New()
 var REGION_US_SOUTH = "us-south"
 var REGION_EU_GB = "eu-gb"
+var REGION_AU_SYD = "au-syd"
 
 func init() {
 	log.SetLevel(logrus.InfoLevel)
@@ -81,53 +82,69 @@ func (ac *AppConfiguration) SetCollectionId(collectionId string) {
 		return
 	}
 
-	ac.featureHandlerInstance = GetFeatureHandlerInstance()
-	ac.featureHandlerInstance.Init(collectionId, ac)
-	ac.isInitializedFeature = true
-	go ac.featureHandlerInstance.loadData()
+	ac.configurationHandlerInstance = GetConfigurationHandlerInstance()
+	ac.configurationHandlerInstance.Init(collectionId, ac)
+	ac.isInitializedConfig = true
+	go ac.configurationHandlerInstance.loadData()
 }
 
-func (ac *AppConfiguration) FetchFeatureData() {
-	if ac.isInitialized && ac.isInitializedFeature {
-		go ac.featureHandlerInstance.loadData()
+func (ac *AppConfiguration) FetchConfigurations() {
+	if ac.isInitialized && ac.isInitializedConfig {
+		go ac.configurationHandlerInstance.loadData()
 	} else {
-		log.Error(messages.COLLECTION_SUB_ERROR)
+		log.Error(messages.COLLECTION_INIT_ERROR)
 	}
 }
 
-func (ac *AppConfiguration) FetchFromFeatureFile(featureFilePath string, enableLiveUpdate bool) {
-	if !ac.isInitialized || !ac.isInitializedFeature {
+func (ac *AppConfiguration) FetchConfigurationFromFile(configurationFile string, liveConfigUpdateEnabled bool) {
+	if !ac.isInitialized || !ac.isInitializedConfig {
 		log.Error(messages.COLLECTION_ID_ERROR)
 		return
 	}
-	if !enableLiveUpdate && len(featureFilePath) == 0 {
-		log.Error(messages.FEATURE_FILE_NOT_FOUND_ERROR)
+	if !liveConfigUpdateEnabled && len(configurationFile) == 0 {
+		log.Error(messages.CONFIGURATION_FILE_NOT_FOUND_ERROR)
 		return
 	}
-	ac.featureHandlerInstance.fetchFromFeatureFile(featureFilePath, enableLiveUpdate)
+	ac.configurationHandlerInstance.fetchConfigurationFromFile(configurationFile, liveConfigUpdateEnabled)
 }
 
-func (ac *AppConfiguration) RegisterFeaturesUpdateListener(fhl featureUpdateListenerFunc) {
-	if ac.isInitialized && ac.isInitializedFeature {
-		ac.featureHandlerInstance.registerFeaturesUpdateListener(fhl)
+func (ac *AppConfiguration) RegisterConfigurationUpdateListener(fhl configurationUpdateListenerFunc) {
+	if ac.isInitialized && ac.isInitializedConfig {
+		ac.configurationHandlerInstance.registerConfigurationUpdateListener(fhl)
 	} else {
-		log.Error(messages.COLLECTION_SUB_ERROR)
+		log.Error(messages.COLLECTION_INIT_ERROR)
 	}
 }
 
 func (ac *AppConfiguration) GetFeature(featureId string) models.Feature {
-	if ac.isInitializedFeature == true && ac.featureHandlerInstance != nil {
-		return ac.featureHandlerInstance.getFeature(featureId)
+	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
+		return ac.configurationHandlerInstance.getFeature(featureId)
 	} else {
-		log.Error(messages.COLLECTION_SUB_ERROR)
+		log.Error(messages.COLLECTION_INIT_ERROR)
 		return models.Feature{}
 	}
 }
 func (ac *AppConfiguration) GetFeatures() map[string]models.Feature {
-	if ac.isInitializedFeature == true && ac.featureHandlerInstance != nil {
-		return ac.featureHandlerInstance.getFeatures()
+	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
+		return ac.configurationHandlerInstance.getFeatures()
 	} else {
-		log.Error(messages.COLLECTION_SUB_ERROR)
+		log.Error(messages.COLLECTION_INIT_ERROR)
+		return nil
+	}
+}
+func (ac *AppConfiguration) GetProperty(propertyId string) models.Property {
+	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
+		return ac.configurationHandlerInstance.getProperty(propertyId)
+	} else {
+		log.Error(messages.COLLECTION_INIT_ERROR)
+		return models.Property{}
+	}
+}
+func (ac *AppConfiguration) GetProperties() map[string]models.Property {
+	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
+		return ac.configurationHandlerInstance.getProperties()
+	} else {
+		log.Error(messages.COLLECTION_INIT_ERROR)
 		return nil
 	}
 }
