@@ -18,6 +18,7 @@ package models
 
 type ConfigResponse struct {
 	Features   []Feature
+	Properties []Property
 	Collection Collection
 	Segments   []Segment
 }

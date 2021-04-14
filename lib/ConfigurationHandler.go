@@ -28,78 +28,78 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type featureUpdateListenerFunc func()
-type FeatureHandler struct {
-	isInitialized            bool
-	collectionId             string
-	urlBuilder               *utils.UrlBuilder
-	appConfig                *AppConfiguration
-	cache                    *models.Cache
-	featuresUpdateListener   featureUpdateListenerFunc
-	featureFile              string
-	liveFeatureUpdateEnabled bool
-	retryCount               int
-	retryInterval            int64
-	socketConnection         *websocket.Conn
-	socketConnectionResponse *http.Response
+type configurationUpdateListenerFunc func()
+type ConfigurationHandler struct {
+	isInitialized               bool
+	collectionId                string
+	urlBuilder                  *utils.UrlBuilder
+	appConfig                   *AppConfiguration
+	cache                       *models.Cache
+	configurationUpdateListener configurationUpdateListenerFunc
+	configurationFile           string
+	liveConfigUpdateEnabled     bool
+	retryCount                  int
+	retryInterval               int64
+	socketConnection            *websocket.Conn
+	socketConnectionResponse    *http.Response
 }
 
-var featureHandlerInstance *FeatureHandler
+var configurationHandlerInstance *ConfigurationHandler
 
-func GetFeatureHandlerInstance() *FeatureHandler {
-	if featureHandlerInstance == nil {
-		featureHandlerInstance = new(FeatureHandler)
+func GetConfigurationHandlerInstance() *ConfigurationHandler {
+	if configurationHandlerInstance == nil {
+		configurationHandlerInstance = new(ConfigurationHandler)
 	}
-	return featureHandlerInstance
+	return configurationHandlerInstance
 }
-func (fh *FeatureHandler) Init(collectionId string, ac *AppConfiguration) {
+func (fh *ConfigurationHandler) Init(collectionId string, ac *AppConfiguration) {
 
 	fh.collectionId = collectionId
 	fh.urlBuilder = utils.GetInstance()
 	fh.urlBuilder.Init(collectionId, ac.GetRegion(), ac.GetGuid(), OverrideServerHost)
 	fh.appConfig = ac
 	utils.GetMeteringInstance().Init(utils.GetInstance().GetMeteringUrl(), fh.appConfig.GetApiKey(), fh.appConfig.GetGuid(), collectionId)
-	fh.featureFile = ""
-	fh.liveFeatureUpdateEnabled = true
+	fh.configurationFile = ""
+	fh.liveConfigUpdateEnabled = true
 	fh.isInitialized = true
 	fh.retryCount = 3
 	fh.retryInterval = 600
 }
-func (fh *FeatureHandler) loadData() {
+func (fh *ConfigurationHandler) loadData() {
 	if !fh.isInitialized {
-		log.Error(messages.FEATURE_HANDLER_INIT_ERROR)
+		log.Error(messages.CONFIGURATION_HANDLER_INIT_ERROR)
 	}
 	log.Debug(messages.LOADING_DATA)
-	log.Debug(messages.CHECK_FEATURE_FILE_PROVIDED)
-	if len(fh.featureFile) > 0 {
-		log.Debug(messages.FEATURE_FILE_PROVIDED)
-		fh.getFileData(fh.featureFile)
+	log.Debug(messages.CHECK_CONFIGURATION_FILE_PROVIDED)
+	if len(fh.configurationFile) > 0 {
+		log.Debug(messages.CONFIGURATION_FILE_PROVIDED)
+		fh.getFileData(fh.configurationFile)
 	}
-	log.Debug(messages.LOADING_FEATURES)
-	fh.loadFeatures()
+	log.Debug(messages.LOADING_CONFIGURATIONS)
+	fh.loadConfigurations()
 	log.Debug(messages.LIVE_UPDATE_CHECK)
-	log.Debug(fh.liveFeatureUpdateEnabled)
-	if fh.liveFeatureUpdateEnabled {
-		go fh.FetchFeaturesData()
+	log.Debug(fh.liveConfigUpdateEnabled)
+	if fh.liveConfigUpdateEnabled {
+		go fh.FetchConfigurationData()
 	}
 }
-func (fh *FeatureHandler) fetchFromFeatureFile(featureFilePath string, enableLiveUpdate bool) {
-	fh.featureFile = featureFilePath
-	fh.liveFeatureUpdateEnabled = enableLiveUpdate
-	log.Debug(messages.FETCH_FROM_FEATURE_FILE + featureFilePath)
-	log.Debug(enableLiveUpdate)
+func (fh *ConfigurationHandler) fetchConfigurationFromFile(configurationFilePath string, liveConfigUpdateEnabled bool) {
+	fh.configurationFile = configurationFilePath
+	fh.liveConfigUpdateEnabled = liveConfigUpdateEnabled
+	log.Debug(messages.FETCH_FROM_CONFIGURATION_FILE + configurationFilePath)
+	log.Debug(liveConfigUpdateEnabled)
 	go fh.loadData()
 
 }
-func (fh *FeatureHandler) FetchFeaturesData() {
-	log.Debug(messages.FETCH_FEATURES_DATA)
+func (fh *ConfigurationHandler) FetchConfigurationData() {
+	log.Debug(messages.FETCH_CONFIGURATION_DATA)
 	if fh.isInitialized {
 		fh.fetchFromApi()
 		fh.startWebSocket()
 	}
 }
 
-func (fh *FeatureHandler) fetchFromApi() {
+func (fh *ConfigurationHandler) fetchFromApi() {
 	log.Debug(messages.FETCH_FROM_API)
 	if fh.isInitialized {
 		fh.retryCount -= 1
@@ -124,7 +124,7 @@ func (fh *FeatureHandler) fetchFromApi() {
 	}
 }
 
-func (fh *FeatureHandler) startWebSocket() {
+func (fh *ConfigurationHandler) startWebSocket() {
 	log.Debug(messages.START_WEB_SOCKET)
 	apiKey := fh.appConfig.GetApiKey()
 	h := http.Header{"Authorization": []string{apiKey}}
@@ -157,8 +157,8 @@ func (fh *FeatureHandler) startWebSocket() {
 	}()
 
 }
-func (fh *FeatureHandler) loadFeatures() {
-	log.Debug(messages.LOADING_FEATURES)
+func (fh *ConfigurationHandler) loadConfigurations() {
+	log.Debug(messages.LOADING_CONFIGURATIONS)
 	defer utils.GracefullyHandleError()
 	data := utils.ReadFiles("")
 	configResponse := models.ConfigResponse{}
@@ -173,6 +173,11 @@ func (fh *FeatureHandler) loadFeatures() {
 		featureMap[feature.GetFeatureId()] = feature
 	}
 
+	propertyMap := make(map[string]models.Property)
+	for _, property := range configResponse.Properties {
+		propertyMap[property.GetPropertyId()] = property
+	}
+
 	segmentMap := make(map[string]models.Segment)
 	for _, segment := range configResponse.Segments {
 		segmentMap[segment.GetSegmentId()] = segment
@@ -180,64 +185,99 @@ func (fh *FeatureHandler) loadFeatures() {
 
 	// initialise cache
 	log.Debug(messages.SET_IN_MEMORY_CACHE)
-	models.SetCache(featureMap, segmentMap)
+	models.SetCache(featureMap, propertyMap, segmentMap)
 	fh.cache = models.GetCacheInstance()
 }
 
-func (fh *FeatureHandler) getFeatures() map[string]models.Feature {
+func (fh *ConfigurationHandler) getFeatureActions(featureID string) models.Feature {
+	fh.loadConfigurations()
+	if fh.cache != nil && len(fh.cache.FeatureMap) > 0 {
+		if val, ok := fh.cache.FeatureMap[featureID]; ok {
+			return val
+		} else {
+			log.Error(messages.INVALID_FEATURE_ID, featureID)
+			return models.Feature{}
+		}
+	} else {
+		return models.Feature{}
+	}
+}
+func (fh *ConfigurationHandler) getFeatures() map[string]models.Feature {
 	if fh.cache == nil {
-		// emptyMap := map[string]models.Feature{}
 		return map[string]models.Feature{}
 	}
 	return fh.cache.FeatureMap
 }
-func (fh *FeatureHandler) getFeature(featureID string) models.Feature {
+func (fh *ConfigurationHandler) getFeature(featureID string) models.Feature {
 	if fh.cache != nil && len(fh.cache.FeatureMap) > 0 {
-		val, ok := fh.cache.FeatureMap[featureID]
-		if ok {
+		if val, ok := fh.cache.FeatureMap[featureID]; ok {
 			return val
+		} else {
+			return fh.getFeatureActions(featureID)
 		}
 	} else {
-		fh.loadFeatures()
-		if fh.cache != nil && len(fh.cache.FeatureMap) > 0 {
-			val, ok := fh.cache.FeatureMap[featureID]
-			if ok {
-				return val
-			}
-		} else {
-			return models.Feature{}
-		}
+		return fh.getFeatureActions(featureID)
 	}
-	return models.Feature{}
 }
 
-func (fh *FeatureHandler) registerFeaturesUpdateListener(fhl featureUpdateListenerFunc) {
+func (fh *ConfigurationHandler) getPropertyActions(propertyID string) models.Property {
+	fh.loadConfigurations()
+	if fh.cache != nil && len(fh.cache.PropertyMap) > 0 {
+		if val, ok := fh.cache.PropertyMap[propertyID]; ok {
+			return val
+		} else {
+			log.Error(messages.INVALID_PROPERTY_ID, propertyID)
+			return models.Property{}
+		}
+	} else {
+		return models.Property{}
+	}
+}
+func (fh *ConfigurationHandler) getProperties() map[string]models.Property {
+	if fh.cache == nil {
+		return map[string]models.Property{}
+	}
+	return fh.cache.PropertyMap
+}
+func (fh *ConfigurationHandler) getProperty(propertyID string) models.Property {
+	if fh.cache != nil && len(fh.cache.PropertyMap) > 0 {
+		if val, ok := fh.cache.PropertyMap[propertyID]; ok {
+			return val
+		} else {
+			return fh.getPropertyActions(propertyID)
+		}
+	} else {
+		return fh.getPropertyActions(propertyID)
+	}
+}
+
+func (fh *ConfigurationHandler) registerConfigurationUpdateListener(fhl configurationUpdateListenerFunc) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error(messages.FEATURES_UPDATE_LISTENER_METHOD_ERROR)
+			log.Error(messages.CONFIGURATION_UPDATE_LISTENER_METHOD_ERROR)
 		}
 	}()
 	if fh.isInitialized {
-		fh.featuresUpdateListener = fhl
+		fh.configurationUpdateListener = fhl
 	} else {
 		log.Error(messages.COLLECTION_ID_ERROR)
 	}
 }
 
-func (fh *FeatureHandler) writeServerFile(content string) {
-	if fh.liveFeatureUpdateEnabled {
+func (fh *ConfigurationHandler) writeServerFile(content string) {
+	if fh.liveConfigUpdateEnabled {
 		fh.writeToFile(content)
 	}
 }
-func (fh *FeatureHandler) writeToFile(content string) {
+func (fh *ConfigurationHandler) writeToFile(content string) {
 	utils.StoreFiles(content)
-	fh.loadFeatures()
-	if fh.featuresUpdateListener != nil {
-		fh.featuresUpdateListener()
+	fh.loadConfigurations()
+	if fh.configurationUpdateListener != nil {
+		fh.configurationUpdateListener()
 	}
 }
 
-func (fh *FeatureHandler) getFileData(filePath string) {
+func (fh *ConfigurationHandler) getFileData(filePath string) {
 	data := utils.ReadFiles(filePath)
 	configResp := models.ConfigResponse{}
 	err := json.Unmarshal(data, &configResp)

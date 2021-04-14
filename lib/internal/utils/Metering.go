@@ -19,6 +19,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 
 	"sync"
 	"time"
@@ -29,14 +30,17 @@ import (
 	"github.com/robfig/cron"
 )
 
-type FeatureUsage struct {
-	Feature_id      string `json:"feature_id"`
-	Evaluation_time string `json:"evaluation_time"`
-	Count           int64  `json:"count"`
+type Usages struct {
+	Feature_id      string      `json:"feature_id,omitempty"`
+	Property_id     string      `json:"property_id,omitempty"`
+	Identity_id     string      `json:"identity_id"`
+	Segment_id      interface{} `json:"segment_id"`
+	Evaluation_time string      `json:"evaluation_time"`
+	Count           int64       `json:"count"`
 }
 type CollectionUsages struct {
-	Collection_id string         `json:"collection_id"`
-	Usages        []FeatureUsage `json:"usages"`
+	Collection_id string   `json:"collection_id"`
+	Usages        []Usages `json:"usages"`
 }
 
 type featureMetric struct {
@@ -44,12 +48,13 @@ type featureMetric struct {
 	evaluationTime string
 }
 type Metering struct {
-	url          string
-	apiKey       string
-	collectionId string
-	guid         string
-	mu           sync.Mutex
-	meteringData map[string]map[string]map[string]featureMetric //guid->collectionid->featureid
+	url                  string
+	apiKey               string
+	collectionId         string
+	guid                 string
+	mu                   sync.Mutex
+	meteringFeatureData  map[string]map[string]map[string]map[string]map[string]featureMetric //guid->collectionId->featureId->identityId->segmentId
+	meteringPropertyData map[string]map[string]map[string]map[string]map[string]featureMetric //guid->collectionId->propertyId->identityId->segmentId
 }
 
 const SEND_INTERVAL = "10m"
@@ -60,6 +65,10 @@ func GetMeteringInstance() *Metering {
 	log.Debug(messages.RETRIEVE_METERING_INSTANCE)
 	if meteringInstance == nil {
 		meteringInstance = &Metering{}
+		guidFeatureMap := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+		guidPropertyMap := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+		meteringInstance.meteringFeatureData = guidFeatureMap
+		meteringInstance.meteringPropertyData = guidPropertyMap
 		// start sending metering data in the background
 		log.Debug(messages.START_SENDING_METERING_DATA)
 		c := cron.New()
@@ -77,11 +86,11 @@ func (mt *Metering) Init(url string, apiKey string, guid string, collectionId st
 	mt.collectionId = collectionId
 }
 
-func (mt *Metering) addMetering(guid string, collectionId string, featureId string) {
+func (mt *Metering) addMetering(guid string, collectionId string, identityId string, segmentId string, featureId string, propertyId string) {
 	log.Debug(messages.ADD_METERING)
 	defer GracefullyHandleError()
 	mt.mu.Lock()
-	t := time.Now()
+	t := time.Now().UTC()
 	formattedTime := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02dZ",
 		t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second())
@@ -89,72 +98,138 @@ func (mt *Metering) addMetering(guid string, collectionId string, featureId stri
 	fm.evaluationTime = formattedTime
 	fm.count = 1
 
-	if _, ok := mt.meteringData[guid]; ok {
-		guidVal := mt.meteringData[guid]
+	meteringData := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+	var modifyKey string
+	if featureId != "" {
+		meteringData = meteringInstance.meteringFeatureData
+		modifyKey = featureId
+	} else {
+		meteringData = meteringInstance.meteringPropertyData
+		modifyKey = propertyId
+	}
+
+	if _, ok := meteringData[guid]; ok {
+		guidVal := meteringData[guid]
 		if _, ok := guidVal[collectionId]; ok {
 			collectionIdVal := guidVal[collectionId]
-			if _, ok := collectionIdVal[featureId]; ok {
-				featureIdVal := collectionIdVal[featureId]
-				featureIdVal.evaluationTime = formattedTime
-				featureIdVal.count = featureIdVal.count + 1
-				collectionIdVal[featureId] = featureIdVal
+			if _, ok := collectionIdVal[modifyKey]; ok {
+				modifyKeyVal := collectionIdVal[modifyKey]
+				if _, ok := modifyKeyVal[identityId]; ok {
+					identityIdVal := modifyKeyVal[identityId]
+					if _, ok := identityIdVal[segmentId]; ok {
+						segmentIdVal := identityIdVal[segmentId]
+						segmentIdVal.evaluationTime = formattedTime
+						segmentIdVal.count = segmentIdVal.count + 1
+						identityIdVal[segmentId] = segmentIdVal
+					} else {
+						identityIdVal[segmentId] = fm
+					}
+				} else {
+					segmentMap := make(map[string]featureMetric)
+					segmentMap[segmentId] = fm
+					modifyKeyVal[identityId] = segmentMap
+				}
 			} else {
-				mt.meteringData[guid][collectionId][featureId] = fm
+				segmentMap := make(map[string]featureMetric)
+				identityMap := make(map[string]map[string]featureMetric)
+				segmentMap[segmentId] = fm
+				identityMap[identityId] = segmentMap
+				collectionIdVal[modifyKey] = identityMap
 			}
 		} else {
-			collectionMap := make(map[string]map[string]featureMetric)
-			featureMap := make(map[string]featureMetric)
-			featureMap[featureId] = fm
-			collectionMap[collectionId] = featureMap
-			mt.meteringData[guid] = collectionMap
+			segmentMap := make(map[string]featureMetric)
+			identityMap := make(map[string]map[string]featureMetric)
+			modifyKeyMap := make(map[string]map[string]map[string]featureMetric)
+			segmentMap[segmentId] = fm
+			identityMap[identityId] = segmentMap
+			modifyKeyMap[modifyKey] = identityMap
+			guidVal[collectionId] = modifyKeyMap
 		}
 	} else {
-		guidMap := make(map[string]map[string]map[string]featureMetric)
-		collectionMap := make(map[string]map[string]featureMetric)
-		featureMap := make(map[string]featureMetric)
-		featureMap[featureId] = fm
-		collectionMap[collectionId] = featureMap
-		guidMap[guid] = collectionMap
-		mt.meteringData = guidMap
+		segmentMap := make(map[string]featureMetric)
+		identityMap := make(map[string]map[string]featureMetric)
+		modifyKeyMap := make(map[string]map[string]map[string]featureMetric)
+		collectionMap := make(map[string]map[string]map[string]map[string]featureMetric)
+		segmentMap[segmentId] = fm
+		identityMap[identityId] = segmentMap
+		modifyKeyMap[modifyKey] = identityMap
+		collectionMap[collectionId] = modifyKeyMap
+		meteringData[guid] = collectionMap
 	}
 	mt.mu.Unlock()
 }
-func (mt *Metering) RecordEvaluation(featureId string) {
+func (mt *Metering) RecordEvaluation(featureId string, propertyId string, identityId string, segmentId string) {
 	log.Debug(messages.RECORD_EVAL)
-	mt.addMetering(mt.guid, mt.collectionId, featureId)
+	mt.addMetering(mt.guid, mt.collectionId, identityId, segmentId, featureId, propertyId)
 }
-func (mt *Metering) sendMetering() {
-	log.Debug(messages.TEN_MIN_EXPIRY)
-	defer GracefullyHandleError()
-	log.Debug(mt.meteringData)
-	mt.mu.Lock()
-	if len(mt.meteringData) <= 0 {
-		mt.mu.Unlock()
-		return
-	}
-	sendMeteringData := mt.meteringData
-	meteringDataMap := make(map[string]map[string]map[string]featureMetric)
-	mt.meteringData = meteringDataMap
+func (mt *Metering) buildRequestBody(sendMeteringData map[string]map[string]map[string]map[string]map[string]featureMetric, guidMap map[string][]CollectionUsages, key string) {
 
-	mt.mu.Unlock()
-	guidMap := make(map[string][]CollectionUsages)
 	for guid, collectionMap := range sendMeteringData {
 		var collectionUsageArray []CollectionUsages
+		if _, ok := guidMap[guid]; !ok {
+			guidMap[guid] = collectionUsageArray
+		}
 		for collectionId, featureMap := range collectionMap {
-			var usagesArray []FeatureUsage
-			for featureId, val := range featureMap {
-				var featureUsage FeatureUsage
-				featureUsage.Feature_id = featureId
-				featureUsage.Evaluation_time = val.evaluationTime
-				featureUsage.Count = val.count
-				usagesArray = append(usagesArray, featureUsage)
+			var usagesArray []Usages
+			for featureId, identityMap := range featureMap {
+				for identityId, segmentMap := range identityMap {
+					for segmentId, val := range segmentMap {
+						var usages Usages
+						if key == "feature_id" {
+							usages.Feature_id = featureId
+						} else {
+							usages.Property_id = featureId
+						}
+						if segmentId == constants.DEFAULT_SEGMENT_ID {
+							usages.Segment_id = nil
+						} else {
+							usages.Segment_id = segmentId
+						}
+						usages.Identity_id = identityId
+						usages.Evaluation_time = val.evaluationTime
+						usages.Count = val.count
+						usagesArray = append(usagesArray, usages)
+					}
+				}
 			}
 			var collectionUsageElem CollectionUsages
 			collectionUsageElem.Collection_id = collectionId
 			collectionUsageElem.Usages = usagesArray
 			collectionUsageArray = append(collectionUsageArray, collectionUsageElem)
 		}
-		guidMap[guid] = collectionUsageArray
+		guidMap[guid] = append(guidMap[guid], collectionUsageArray...)
+	}
+}
+func (mt *Metering) sendMetering() {
+	log.Debug(messages.TEN_MIN_EXPIRY)
+	defer GracefullyHandleError()
+	log.Debug(mt.meteringFeatureData)
+	log.Debug(mt.meteringPropertyData)
+	mt.mu.Lock()
+	if len(mt.meteringFeatureData) <= 0 && len(mt.meteringPropertyData) <= 0 {
+		mt.mu.Unlock()
+		return
+	}
+	sendFeatureData := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+	sendFeatureData = mt.meteringFeatureData
+	meteringFeatureDataMap := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+	mt.meteringFeatureData = meteringFeatureDataMap
+
+	sendPropertyData := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+	sendPropertyData = mt.meteringPropertyData
+	meteringPropertyDataMap := make(map[string]map[string]map[string]map[string]map[string]featureMetric)
+	mt.meteringPropertyData = meteringPropertyDataMap
+
+	mt.mu.Unlock()
+
+	guidMap := make(map[string][]CollectionUsages)
+
+	if len(sendFeatureData) > 0 {
+		mt.buildRequestBody(sendFeatureData, guidMap, "feature_id")
+	}
+
+	if len(sendPropertyData) > 0 {
+		mt.buildRequestBody(sendPropertyData, guidMap, "property_id")
 	}
 
 	for guid, val := range guidMap {

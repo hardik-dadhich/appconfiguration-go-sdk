@@ -58,78 +58,58 @@ func (r *Rule) operatorCheck(key interface{}, value interface{}) bool {
 		result = strings.Contains(key.(string), value.(string))
 		break
 	case "is":
-		if isNumber(key) && !(isNumber(value)) {
+		if isNumber(key) {
 			// compare number
-			if reflect.TypeOf(value).String() == "string" {
-				key = key.(float64)
-				floatVal, _ := strconv.ParseFloat((value.(string)), 64)
-				result = (key == floatVal)
-			}
-		} else if !isNumber(key) && isNumber(value) {
-			// compare string
-			if reflect.TypeOf(key).String() == "string" {
-				floatKey, _ := strconv.ParseFloat(key.(string), 64)
-				result = (floatKey == value.(float64))
-			}
+			key, _ = getFloat(key)
+			value, _ = strconv.ParseFloat(value.(string), 64)
+			result = (key.(float64) == value.(float64))
 		} else {
+			// compare string or boolean
 			result = (key == value)
 		}
 		break
 	case "greaterThan":
-		if isNumber(key) && isNumber(value) {
+		if isNumber(key) {
+			key, _ = getFloat(key)
+			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = key.(float64) > value.(float64)
-		} else if isString(key) || isString(value) {
-
-			if isString(key) {
-				key, _ = strconv.ParseFloat(key.(string), 64)
-			}
-			if isString(value) {
-				value, _ = strconv.ParseFloat(value.(string), 64)
-			}
+		} else if isString(key) {
+			key, _ = strconv.ParseFloat(key.(string), 64)
+			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = key.(float64) > value.(float64)
 		}
 		break
 	case "lesserThan":
-		if isNumber(key) && isNumber(value) {
+		if isNumber(key) {
+			key, _ = getFloat(key)
+			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = key.(float64) < value.(float64)
-		} else if isString(key) || isString(value) {
-
-			if isString(key) {
-				key, _ = strconv.ParseFloat(key.(string), 64)
-			}
-			if isString(value) {
-				value, _ = strconv.ParseFloat(value.(string), 64)
-			}
+		} else if isString(key) {
+			key, _ = strconv.ParseFloat(key.(string), 64)
+			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = key.(float64) < value.(float64)
 		}
 		break
 	case "greaterThanEquals":
-		if isNumber(key) && isNumber(value) {
+		if isNumber(key) {
+			key, _ = getFloat(key)
+			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = key.(float64) >= value.(float64)
-		} else if isString(key) || isString(value) {
-
-			if isString(key) {
-				key, _ = strconv.ParseFloat(key.(string), 64)
-			}
-			if isString(value) {
-				value, _ = strconv.ParseFloat(value.(string), 64)
-			}
+		} else if isString(key) {
+			key, _ = strconv.ParseFloat(key.(string), 64)
+			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = key.(float64) >= value.(float64)
 		}
 		break
 	case "lesserThanEquals":
-
-		if isNumber(key) && isNumber(value) {
-			result = key.(float64) >= value.(float64)
-		} else if isString(key) || isString(value) {
-
-			if isString(key) {
-				key, _ = strconv.ParseFloat(key.(string), 64)
-			}
-			if isString(value) {
-				value, _ = strconv.ParseFloat(value.(string), 64)
-			}
-			result = key.(float64) >= value.(float64)
+		if isNumber(key) {
+			key, _ = getFloat(key)
+			value, _ = strconv.ParseFloat(value.(string), 64)
+			result = key.(float64) <= value.(float64)
+		} else if isString(key) {
+			key, _ = strconv.ParseFloat(key.(string), 64)
+			value, _ = strconv.ParseFloat(value.(string), 64)
+			result = key.(float64) <= value.(float64)
 		}
 		break
 	default:
@@ -149,6 +129,36 @@ func isNumber(val interface{}) bool {
 }
 func isString(val interface{}) bool {
 	return reflect.TypeOf(val).String() == "string"
+}
+func getFloat(unk interface{}) (float64, error) {
+	switch i := unk.(type) {
+	case float64:
+		return i, nil
+	case float32:
+		return float64(i), nil
+	case int64:
+		return float64(i), nil
+	case int32:
+		return float64(i), nil
+	case int16:
+		return float64(i), nil
+	case int8:
+		return float64(i), nil
+	case uint64:
+		return float64(i), nil
+	case uint32:
+		return float64(i), nil
+	case uint16:
+		return float64(i), nil
+	case uint8:
+		return float64(i), nil
+	case int:
+		return float64(i), nil
+	case uint:
+		return float64(i), nil
+	default:
+		return float64(0), nil
+	}
 }
 func (r *Rule) EvaluateRule(identity map[string]interface{}) bool {
 	defer utils.GracefullyHandleError()

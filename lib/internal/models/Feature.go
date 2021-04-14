@@ -17,16 +17,11 @@
 package models
 
 import (
+	constants "github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 	messages "github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
 	utils "github.com/IBM/appconfiguration-go-sdk/lib/internal/utils"
 
 	"sort"
-)
-
-var (
-	NUMERIC string = "NUMERIC"
-	STRING  string = "STRING"
-	BOOLEAN string = "BOOLEAN"
 )
 
 type Feature struct {
@@ -36,7 +31,6 @@ type Feature struct {
 	Enabled_value  interface{}   `json:"enabled_value"`
 	Disabled_value interface{}   `json:"disabled_value"`
 	Segment_rules  []SegmentRule `json:"segment_rules"`
-	Segment_exists bool          `json:"segment_exists"`
 	Enabled        bool          `json:"isEnabled"`
 }
 
@@ -61,9 +55,6 @@ func (f *Feature) IsEnabled() bool {
 func (f *Feature) GetSegmentRules() []SegmentRule {
 	return f.Segment_rules
 }
-func (f *Feature) SegmentExists() bool {
-	return f.Segment_exists
-}
 func (f *Feature) GetCurrentValue(id string, identity map[string]interface{}) interface{} {
 	log.Debug(messages.RETRIEVING_FEATURE)
 	if len(id) <= 0 {
@@ -71,64 +62,63 @@ func (f *Feature) GetCurrentValue(id string, identity map[string]interface{}) in
 		return nil
 	}
 
-	utils.GetMeteringInstance().RecordEvaluation(f.GetFeatureName())
+	val := f.featureEvaluation(id, identity)
+	return getTypeCastedValue(val, f.GetFeatureDataType())
+}
+func (f *Feature) featureEvaluation(id string, identity map[string]interface{}) interface{} {
+
+	var evaluatedSegmentId string = constants.DEFAULT_SEGMENT_ID
+	defer func() { utils.GetMeteringInstance().RecordEvaluation(f.GetFeatureId(), "", id, evaluatedSegmentId) }()
+
 	if f.IsEnabled() {
-		if f.SegmentExists() && len(f.GetSegmentRules()) > 0 {
-			val := f.featureEvaluation(identity)
-			return getTypeCastedValue(val, f.GetFeatureDataType())
-		} else {
+		log.Debug(messages.EVALUATING_FEATURE)
+		defer utils.GracefullyHandleError()
+
+		if len(identity) < 0 {
+			log.Debug(f.GetEnabledValue())
 			return f.GetEnabledValue()
 		}
-	}
-	return f.GetDisabledValue()
-}
-func getTypeCastedValue(val interface{}, valType string) interface{} {
-	if valType == "NUMERIC" {
-		return val.(float64)
-	} else if valType == "BOOLEAN" {
-		return val.(bool)
-	} else {
-		return val.(string)
-	}
-}
-func (f *Feature) featureEvaluation(identity map[string]interface{}) interface{} {
-	log.Debug(messages.EVALUATING_FEATURE)
-	defer utils.GracefullyHandleError()
-	if len(identity) < 0 {
-		log.Debug(f.GetEnabledValue())
-		return f.GetEnabledValue()
-	}
-	var rulesMap map[int]SegmentRule
-	rulesMap = f.parseRules(f.GetSegmentRules())
 
-	// sort the map elements as per ascending order of keys
+		if len(f.GetSegmentRules()) > 0 {
 
-	var keys []int
-	for k, _ := range rulesMap {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
+			var rulesMap map[int]SegmentRule
+			rulesMap = f.parseRules(f.GetSegmentRules())
 
-	// after sorting , pick up each map element as per keys order
-	for _, k := range keys {
-		segmentRule := rulesMap[k]
-		for _, rule := range segmentRule.GetRules() {
-			for _, segmentKey := range rule.Segments {
-				if f.evaluateSegment(string(segmentKey), identity) {
-					if segmentRule.GetValue() == "$default" {
-						log.Debug(messages.FEATURE_VALUE)
-						log.Debug(f.GetEnabledValue())
-						return f.GetEnabledValue()
-					} else {
-						log.Debug(messages.FEATURE_VALUE)
-						log.Debug(segmentRule.GetValue())
-						return segmentRule.GetValue()
+			// sort the map elements as per ascending order of keys
+
+			var keys []int
+			for k, _ := range rulesMap {
+				keys = append(keys, k)
+			}
+			sort.Ints(keys)
+
+			// after sorting , pick up each map element as per keys order
+			for _, k := range keys {
+				segmentRule := rulesMap[k]
+				for _, rule := range segmentRule.GetRules() {
+					for _, segmentKey := range rule.Segments {
+						if f.evaluateSegment(string(segmentKey), identity) {
+							evaluatedSegmentId = segmentKey
+							if segmentRule.GetValue() == "$default" {
+								log.Debug(messages.FEATURE_VALUE)
+								log.Debug(f.GetEnabledValue())
+								return f.GetEnabledValue()
+							} else {
+								log.Debug(messages.FEATURE_VALUE)
+								log.Debug(segmentRule.GetValue())
+								return segmentRule.GetValue()
+							}
+						}
 					}
 				}
 			}
+		} else {
+			return f.GetEnabledValue()
 		}
+		return f.GetEnabledValue()
+	} else {
+		return f.GetDisabledValue()
 	}
-	return f.GetEnabledValue()
 }
 func (f *Feature) parseRules(segmentRules []SegmentRule) map[int]SegmentRule {
 	log.Debug(messages.PARSING_FEATURE_RULES)

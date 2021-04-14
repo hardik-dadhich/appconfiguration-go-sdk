@@ -24,6 +24,7 @@ import (
 
 type Cache struct {
 	FeatureMap map[string]Feature
+	PropertyMap map[string]Property
 	SegmentMap map[string]Segment
 }
 
@@ -37,9 +38,10 @@ func init() {
 		log.SetLevel(logrus.InfoLevel)
 	}
 }
-func SetCache(featureMap map[string]Feature, segmentMap map[string]Segment) {
+func SetCache(featureMap map[string]Feature, propertyMap map[string]Property, segmentMap map[string]Segment) {
 	CacheInstance = new(Cache)
 	CacheInstance.FeatureMap = featureMap
+	CacheInstance.PropertyMap = propertyMap
 	CacheInstance.SegmentMap = segmentMap
 	log.Debug(CacheInstance)
 }

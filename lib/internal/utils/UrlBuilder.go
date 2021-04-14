@@ -75,7 +75,7 @@ func (ub *UrlBuilder) GetWebSocketUrl() string {
 func (ub *UrlBuilder) GetMeteringUrl() string {
 	base := "https://" + ub.region + ub.baseUrl + ub.service
 	if len(ub.reWriteDomain) > 0 {
-		base = ub.reWriteDomain + ub.service
+		base = "https://" + ub.reWriteDomain + ub.service
 	}
 	return base + ub.events
 }
