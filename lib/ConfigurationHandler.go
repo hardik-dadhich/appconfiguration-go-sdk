@@ -147,6 +147,7 @@ func (fh *ConfigurationHandler) startWebSocket() {
 			log.Debug(string(message))
 			if err != nil {
 				log.Error(messages.WEBSOCKET_ERROR_READING_MESSAGE, err.Error())
+				go fh.startWebSocket()
 				return
 			}
 			if string(message) != "test message" {
