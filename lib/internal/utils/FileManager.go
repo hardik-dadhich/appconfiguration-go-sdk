@@ -19,6 +19,7 @@ package utils
 import (
 	constants "github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 	messages "github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
+	"os"
 
 	"encoding/json"
 	"io/ioutil"
@@ -47,6 +48,10 @@ func ReadFiles(filePath string) []byte {
 	fileToRead := featureFile
 	if len(filePath) > 0 {
 		fileToRead = filePath
+	}
+	if _, err := os.Stat(fileToRead); os.IsNotExist(err) {
+		// file does not exists
+		return []byte(`{}`)
 	}
 	file, err := ioutil.ReadFile(fileToRead)
 	if err != nil {
