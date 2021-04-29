@@ -1,4 +1,4 @@
-module github.com/srikanthkm/appconfiguration-go-sdk/v2
+module github.com/srikanthkm/appconfiguration-go-sdk
 
 go 1.16
 
