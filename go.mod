@@ -1,4 +1,4 @@
-module github.com/IBM/appconfiguration-go-sdk
+module github.com/IBM/appconfiguration-go-sdk/v2
 
 go 1.16
 
