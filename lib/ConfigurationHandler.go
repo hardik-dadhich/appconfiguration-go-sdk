@@ -32,6 +32,10 @@ type configurationUpdateListenerFunc func()
 type ConfigurationHandler struct {
 	isInitialized               bool
 	collectionId                string
+	environmentId               string
+	apikey                      string
+	guid                        string
+	region                      string
 	urlBuilder                  *utils.UrlBuilder
 	appConfig                   *AppConfiguration
 	cache                       *models.Cache
@@ -52,113 +56,109 @@ func GetConfigurationHandlerInstance() *ConfigurationHandler {
 	}
 	return configurationHandlerInstance
 }
-func (fh *ConfigurationHandler) Init(collectionId string, ac *AppConfiguration) {
-
-	fh.collectionId = collectionId
-	fh.urlBuilder = utils.GetInstance()
-	fh.urlBuilder.Init(collectionId, ac.GetRegion(), ac.GetGuid(), OverrideServerHost)
-	fh.appConfig = ac
-	utils.GetMeteringInstance().Init(utils.GetInstance().GetMeteringUrl(), fh.appConfig.GetApiKey(), fh.appConfig.GetGuid(), collectionId)
-	fh.configurationFile = ""
-	fh.liveConfigUpdateEnabled = true
-	fh.isInitialized = true
-	fh.retryCount = 3
-	fh.retryInterval = 600
+func (ch *ConfigurationHandler) Init(region, guid, apikey string) {
+	ch.region = region
+	ch.guid = guid
+	ch.apikey = apikey
 }
-func (fh *ConfigurationHandler) loadData() {
-	if !fh.isInitialized {
+func (ch *ConfigurationHandler) SetContext(collectionId, environmentId, configurationFile string, liveConfigUpdateEnabled bool) {
+	ch.collectionId = collectionId
+	ch.environmentId = environmentId
+	ch.urlBuilder = utils.GetInstance()
+	ch.urlBuilder.Init(ch.collectionId, ch.environmentId, ch.region, ch.guid, OverrideServerHost)
+	utils.GetMeteringInstance().Init(utils.GetInstance().GetMeteringUrl(), ch.apikey, ch.guid, environmentId, collectionId)
+	ch.configurationFile = configurationFile
+	ch.liveConfigUpdateEnabled = liveConfigUpdateEnabled
+	ch.isInitialized = true
+	ch.retryCount = 3
+	ch.retryInterval = 600
+}
+func (ch *ConfigurationHandler) loadData() {
+	if !ch.isInitialized {
 		log.Error(messages.CONFIGURATION_HANDLER_INIT_ERROR)
 	}
 	log.Debug(messages.LOADING_DATA)
 	log.Debug(messages.CHECK_CONFIGURATION_FILE_PROVIDED)
-	if len(fh.configurationFile) > 0 {
+	if len(ch.configurationFile) > 0 {
 		log.Debug(messages.CONFIGURATION_FILE_PROVIDED)
-		fh.getFileData(fh.configurationFile)
+		ch.getFileData(ch.configurationFile)
 	}
 	log.Debug(messages.LOADING_CONFIGURATIONS)
-	fh.loadConfigurations()
+	ch.loadConfigurations()
 	log.Debug(messages.LIVE_UPDATE_CHECK)
-	log.Debug(fh.liveConfigUpdateEnabled)
-	if fh.liveConfigUpdateEnabled {
-		go fh.FetchConfigurationData()
+	log.Debug(ch.liveConfigUpdateEnabled)
+	if ch.liveConfigUpdateEnabled {
+		ch.FetchConfigurationData()
 	}
 }
-func (fh *ConfigurationHandler) fetchConfigurationFromFile(configurationFilePath string, liveConfigUpdateEnabled bool) {
-	fh.configurationFile = configurationFilePath
-	fh.liveConfigUpdateEnabled = liveConfigUpdateEnabled
-	log.Debug(messages.FETCH_FROM_CONFIGURATION_FILE + configurationFilePath)
-	log.Debug(liveConfigUpdateEnabled)
-	go fh.loadData()
-
-}
-func (fh *ConfigurationHandler) FetchConfigurationData() {
+func (ch *ConfigurationHandler) FetchConfigurationData() {
 	log.Debug(messages.FETCH_CONFIGURATION_DATA)
-	if fh.isInitialized {
-		fh.fetchFromApi()
-		fh.startWebSocket()
+	if ch.isInitialized {
+		ch.fetchFromApi()
+		go ch.startWebSocket()
 	}
 }
 
-func (fh *ConfigurationHandler) fetchFromApi() {
+func (ch *ConfigurationHandler) fetchFromApi() {
 	log.Debug(messages.FETCH_FROM_API)
-	if fh.isInitialized {
-		fh.retryCount -= 1
-		configUrl := fh.urlBuilder.GetConfigUrl()
-		apiManager := utils.NewApiManagerInstance(configUrl, "GET", fh.appConfig.GetApiKey(), OverrideServerHost)
+	if ch.isInitialized {
+		ch.retryCount -= 1
+		configUrl := ch.urlBuilder.GetConfigUrl()
+		apiManager := utils.NewApiManagerInstance(configUrl, "GET", ch.apikey, OverrideServerHost)
 		response, statusCode := apiManager.ExecuteApiCall()
 		if statusCode >= 200 && statusCode <= 299 {
-			fh.writeServerFile(response)
+			ch.writeServerFile(response)
 		} else {
-			if fh.retryCount > 0 {
-				fh.fetchFromApi()
+			if ch.retryCount > 0 {
+				log.Error(messages.CONFIG_API_ERROR)
+				ch.fetchFromApi()
 			} else {
-				fh.retryCount = 3
-				time.AfterFunc(time.Second*time.Duration(fh.retryInterval), func() {
-					fh.fetchFromApi()
+				ch.retryCount = 3
+				time.AfterFunc(time.Second*time.Duration(ch.retryInterval), func() {
+					ch.fetchFromApi()
 				})
 			}
 		}
-		log.Debug(response)
 	} else {
 		log.Debug(messages.FETCH_FROM_API_SDK_INIT_ERROR)
 	}
 }
 
-func (fh *ConfigurationHandler) startWebSocket() {
+func (ch *ConfigurationHandler) startWebSocket() {
 	log.Debug(messages.START_WEB_SOCKET)
-	apiKey := fh.appConfig.GetApiKey()
+	apiKey := ch.apikey
 	h := http.Header{"Authorization": []string{apiKey}}
 	var err error
-	if fh.socketConnection != nil {
-		fh.socketConnection.Close()
+	if ch.socketConnection != nil {
+		ch.socketConnection.Close()
 	}
-	fh.socketConnection, fh.socketConnectionResponse, err = websocket.DefaultDialer.Dial(fh.urlBuilder.GetWebSocketUrl(), h)
+	ch.socketConnection, ch.socketConnectionResponse, err = websocket.DefaultDialer.Dial(ch.urlBuilder.GetWebSocketUrl(), h)
 	if err != nil {
-		log.Error(messages.WEB_SOCKET_CONNECT_ERR, err, fh.socketConnectionResponse.StatusCode)
+		log.Error(messages.WEB_SOCKET_CONNECT_ERR, err, ch.socketConnectionResponse.StatusCode)
 		log.Info(messages.RETRY_WEB_SCOKET_CONNECT)
-		go fh.startWebSocket()
+		go ch.startWebSocket()
 	}
 	// defer c.Close()
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		for {
-			_, message, err := fh.socketConnection.ReadMessage()
+			_, message, err := ch.socketConnection.ReadMessage()
 			log.Debug(string(message))
 			if err != nil {
 				log.Error(messages.WEBSOCKET_ERROR_READING_MESSAGE, err.Error())
-				go fh.startWebSocket()
+				go ch.startWebSocket()
 				return
 			}
 			if string(message) != "test message" {
 				log.Debug(messages.WEBSOCKET_RECEIVING_MESSAGE + string(message))
-				fh.fetchFromApi()
+				ch.fetchFromApi()
 			}
 		}
 	}()
 
 }
-func (fh *ConfigurationHandler) loadConfigurations() {
+func (ch *ConfigurationHandler) loadConfigurations() {
 	log.Debug(messages.LOADING_CONFIGURATIONS)
 	defer utils.GracefullyHandleError()
 	data := utils.ReadFiles("")
@@ -187,13 +187,13 @@ func (fh *ConfigurationHandler) loadConfigurations() {
 	// initialise cache
 	log.Debug(messages.SET_IN_MEMORY_CACHE)
 	models.SetCache(featureMap, propertyMap, segmentMap)
-	fh.cache = models.GetCacheInstance()
+	ch.cache = models.GetCacheInstance()
 }
 
-func (fh *ConfigurationHandler) getFeatureActions(featureID string) models.Feature {
-	fh.loadConfigurations()
-	if fh.cache != nil && len(fh.cache.FeatureMap) > 0 {
-		if val, ok := fh.cache.FeatureMap[featureID]; ok {
+func (ch *ConfigurationHandler) getFeatureActions(featureID string) models.Feature {
+	ch.loadConfigurations()
+	if ch.cache != nil && len(ch.cache.FeatureMap) > 0 {
+		if val, ok := ch.cache.FeatureMap[featureID]; ok {
 			return val
 		} else {
 			log.Error(messages.INVALID_FEATURE_ID, featureID)
@@ -203,28 +203,28 @@ func (fh *ConfigurationHandler) getFeatureActions(featureID string) models.Featu
 		return models.Feature{}
 	}
 }
-func (fh *ConfigurationHandler) getFeatures() map[string]models.Feature {
-	if fh.cache == nil {
+func (ch *ConfigurationHandler) getFeatures() map[string]models.Feature {
+	if ch.cache == nil {
 		return map[string]models.Feature{}
 	}
-	return fh.cache.FeatureMap
+	return ch.cache.FeatureMap
 }
-func (fh *ConfigurationHandler) getFeature(featureID string) models.Feature {
-	if fh.cache != nil && len(fh.cache.FeatureMap) > 0 {
-		if val, ok := fh.cache.FeatureMap[featureID]; ok {
+func (ch *ConfigurationHandler) getFeature(featureID string) models.Feature {
+	if ch.cache != nil && len(ch.cache.FeatureMap) > 0 {
+		if val, ok := ch.cache.FeatureMap[featureID]; ok {
 			return val
 		} else {
-			return fh.getFeatureActions(featureID)
+			return ch.getFeatureActions(featureID)
 		}
 	} else {
-		return fh.getFeatureActions(featureID)
+		return ch.getFeatureActions(featureID)
 	}
 }
 
-func (fh *ConfigurationHandler) getPropertyActions(propertyID string) models.Property {
-	fh.loadConfigurations()
-	if fh.cache != nil && len(fh.cache.PropertyMap) > 0 {
-		if val, ok := fh.cache.PropertyMap[propertyID]; ok {
+func (ch *ConfigurationHandler) getPropertyActions(propertyID string) models.Property {
+	ch.loadConfigurations()
+	if ch.cache != nil && len(ch.cache.PropertyMap) > 0 {
+		if val, ok := ch.cache.PropertyMap[propertyID]; ok {
 			return val
 		} else {
 			log.Error(messages.INVALID_PROPERTY_ID, propertyID)
@@ -234,51 +234,51 @@ func (fh *ConfigurationHandler) getPropertyActions(propertyID string) models.Pro
 		return models.Property{}
 	}
 }
-func (fh *ConfigurationHandler) getProperties() map[string]models.Property {
-	if fh.cache == nil {
+func (ch *ConfigurationHandler) getProperties() map[string]models.Property {
+	if ch.cache == nil {
 		return map[string]models.Property{}
 	}
-	return fh.cache.PropertyMap
+	return ch.cache.PropertyMap
 }
-func (fh *ConfigurationHandler) getProperty(propertyID string) models.Property {
-	if fh.cache != nil && len(fh.cache.PropertyMap) > 0 {
-		if val, ok := fh.cache.PropertyMap[propertyID]; ok {
+func (ch *ConfigurationHandler) getProperty(propertyID string) models.Property {
+	if ch.cache != nil && len(ch.cache.PropertyMap) > 0 {
+		if val, ok := ch.cache.PropertyMap[propertyID]; ok {
 			return val
 		} else {
-			return fh.getPropertyActions(propertyID)
+			return ch.getPropertyActions(propertyID)
 		}
 	} else {
-		return fh.getPropertyActions(propertyID)
+		return ch.getPropertyActions(propertyID)
 	}
 }
 
-func (fh *ConfigurationHandler) registerConfigurationUpdateListener(fhl configurationUpdateListenerFunc) {
+func (ch *ConfigurationHandler) registerConfigurationUpdateListener(chl configurationUpdateListenerFunc) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error(messages.CONFIGURATION_UPDATE_LISTENER_METHOD_ERROR)
 		}
 	}()
-	if fh.isInitialized {
-		fh.configurationUpdateListener = fhl
+	if ch.isInitialized {
+		ch.configurationUpdateListener = chl
 	} else {
 		log.Error(messages.COLLECTION_ID_ERROR)
 	}
 }
 
-func (fh *ConfigurationHandler) writeServerFile(content string) {
-	if fh.liveConfigUpdateEnabled {
-		fh.writeToFile(content)
+func (ch *ConfigurationHandler) writeServerFile(content string) {
+	if ch.liveConfigUpdateEnabled {
+		ch.writeToFile(content)
 	}
 }
-func (fh *ConfigurationHandler) writeToFile(content string) {
+func (ch *ConfigurationHandler) writeToFile(content string) {
 	utils.StoreFiles(content)
-	fh.loadConfigurations()
-	if fh.configurationUpdateListener != nil {
-		fh.configurationUpdateListener()
+	ch.loadConfigurations()
+	if ch.configurationUpdateListener != nil {
+		ch.configurationUpdateListener()
 	}
 }
 
-func (fh *ConfigurationHandler) getFileData(filePath string) {
+func (ch *ConfigurationHandler) getFileData(filePath string) {
 	data := utils.ReadFiles(filePath)
 	configResp := models.ConfigResponse{}
 	err := json.Unmarshal(data, &configResp)
@@ -292,5 +292,5 @@ func (fh *ConfigurationHandler) getFileData(filePath string) {
 		log.Error(messages.MARSHAL_JSON_ERR, err)
 		return
 	}
-	fh.writeToFile(string(out))
+	ch.writeToFile(string(out))
 }

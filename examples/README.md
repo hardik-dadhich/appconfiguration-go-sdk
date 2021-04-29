@@ -87,8 +87,9 @@ Select the segment "Users from Bangalore urban area" from the dropdown.
 Choose Override enabled value, and give the value(say "Bangalore") in the textarea.
 Click Save rule & Add the targeting.
 ```
+- Use the `id` of default environment created on instance creation.
 
-- In the sample app, provide the collectionId, featureId & propertyId in file [`main.go`](main.go#L23)
+- In the sample app, provide the collectionId, environmentId, featureId & propertyId in file [`main.go`](main.go#L23)
 
 ## Step 4: Run the app
 

@@ -85,6 +85,8 @@ func (ap *ApiManager) ExecuteApiCall() (string, int) {
 		return "", resp.StatusCode
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
-	log.Println(string([]byte(body)))
+	if resp.StatusCode != 200 {
+		log.Println(string([]byte(body)))
+	}
 	return string([]byte(body)), resp.StatusCode
 }
