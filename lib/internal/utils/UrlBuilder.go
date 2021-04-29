@@ -16,6 +16,8 @@
 
 package utils
 
+import "regexp"
+
 type UrlBuilder struct {
 	baseUrl       string
 	wsUrl         string
@@ -48,12 +50,13 @@ func GetInstance() *UrlBuilder {
 	return urlBuilderInstance
 }
 
-func (ub *UrlBuilder) Init(collectionId string, region string, guid string, overrideServerHost string) {
+func (ub *UrlBuilder) Init(collectionId string, environmentId string, region string, guid string, overrideServerHost string) {
 	ub.region = region
 	ub.guid = guid
 	if len(overrideServerHost) > 0 {
-		ub.httpBase += overrideServerHost
-		ub.webSocketBase += overrideServerHost
+		ub.httpBase = overrideServerHost
+		var compile, _ = regexp.Compile(`http([a-z]*)://`)
+		ub.webSocketBase += compile.ReplaceAllString(overrideServerHost, "")
 		ub.reWriteDomain = overrideServerHost
 	} else {
 		ub.httpBase += region
@@ -62,8 +65,8 @@ func (ub *UrlBuilder) Init(collectionId string, region string, guid string, over
 		ub.webSocketBase += ub.baseUrl
 		ub.reWriteDomain = ""
 	}
-	ub.httpBase += ub.service + ub.path + guid + "/collections/" + collectionId + "/config"
-	ub.webSocketBase += ub.service + ub.wsUrl + "?instance_id=" + guid + "&collection_id=" + collectionId
+	ub.httpBase += ub.service + ub.path + guid + "/collections/" + collectionId + "/config?environment_id=" + environmentId
+	ub.webSocketBase += ub.service + ub.wsUrl + "?instance_id=" + guid + "&collection_id=" + collectionId + "&environment_id=" + environmentId
 }
 func (ub *UrlBuilder) GetConfigUrl() string {
 	return ub.httpBase
@@ -75,7 +78,7 @@ func (ub *UrlBuilder) GetWebSocketUrl() string {
 func (ub *UrlBuilder) GetMeteringUrl() string {
 	base := "https://" + ub.region + ub.baseUrl + ub.service
 	if len(ub.reWriteDomain) > 0 {
-		base = "https://" + ub.reWriteDomain + ub.service
+		base = ub.reWriteDomain + ub.service
 	}
 	return base + ub.events
 }

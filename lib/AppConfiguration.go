@@ -17,6 +17,7 @@
 package lib
 
 import (
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 	"os"
 
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
@@ -26,12 +27,13 @@ import (
 )
 
 type AppConfiguration struct {
-	region                       string
-	guid                         string
-	apikey                       string
 	isInitialized                bool
 	isInitializedConfig          bool
 	configurationHandlerInstance *ConfigurationHandler
+}
+type ContextOptions struct {
+	ConfigurationFile       string
+	LiveConfigUpdateEnabled bool
 }
 
 var appConfigurationInstance *AppConfiguration
@@ -65,14 +67,13 @@ func (ac *AppConfiguration) Init(region string, guid string, apikey string) {
 		}
 		return
 	}
-	ac.region = region
-	ac.guid = guid
-	ac.apikey = apikey
+	ac.configurationHandlerInstance = GetConfigurationHandlerInstance()
+	ac.configurationHandlerInstance.Init(region, guid, apikey)
 	ac.isInitialized = true
 }
 
-func (ac *AppConfiguration) SetCollectionId(collectionId string) {
-	log.Debug(messages.SETTING_COLLECTION_ID)
+func (ac *AppConfiguration) SetContext(collectionId string, environmentId string, options ...ContextOptions) {
+	log.Debug(messages.SETTING_CONTEXT)
 	if !ac.isInitialized {
 		log.Error(messages.COLLECTION_ID_ERROR)
 		return
@@ -81,11 +82,30 @@ func (ac *AppConfiguration) SetCollectionId(collectionId string) {
 		log.Error(messages.COLLECTION_ID_VALUE_ERROR)
 		return
 	}
-
-	ac.configurationHandlerInstance = GetConfigurationHandlerInstance()
-	ac.configurationHandlerInstance.Init(collectionId, ac)
+	if len(environmentId) == 0 {
+		log.Error(messages.ENVIRONMENT_ID_VALUE_ERROR)
+		return
+	}
+	switch len(options) {
+	case 0:
+		ac.configurationHandlerInstance.SetContext(collectionId, environmentId, "", true)
+	case 1:
+		if !options[0].LiveConfigUpdateEnabled && len(options[0].ConfigurationFile) == 0 {
+			log.Error(messages.CONFIGURATION_FILE_NOT_FOUND_ERROR)
+			return
+		}
+		ac.configurationHandlerInstance.SetContext(collectionId, environmentId, options[0].ConfigurationFile, options[0].LiveConfigUpdateEnabled)
+	default:
+		log.Error(messages.INCORRECT_USAGE_OF_CONTEXT_OPTIONS)
+		return
+	}
 	ac.isInitializedConfig = true
-	go ac.configurationHandlerInstance.loadData()
+	if _, err := os.Stat(constants.FEATURE_FILE); os.IsNotExist(err) {
+		ac.configurationHandlerInstance.loadData()
+	} else {
+		ac.configurationHandlerInstance.loadConfigurations()
+		go ac.configurationHandlerInstance.loadData()
+	}
 }
 
 func (ac *AppConfiguration) FetchConfigurations() {
@@ -94,18 +114,6 @@ func (ac *AppConfiguration) FetchConfigurations() {
 	} else {
 		log.Error(messages.COLLECTION_INIT_ERROR)
 	}
-}
-
-func (ac *AppConfiguration) FetchConfigurationFromFile(configurationFile string, liveConfigUpdateEnabled bool) {
-	if !ac.isInitialized || !ac.isInitializedConfig {
-		log.Error(messages.COLLECTION_ID_ERROR)
-		return
-	}
-	if !liveConfigUpdateEnabled && len(configurationFile) == 0 {
-		log.Error(messages.CONFIGURATION_FILE_NOT_FOUND_ERROR)
-		return
-	}
-	ac.configurationHandlerInstance.fetchConfigurationFromFile(configurationFile, liveConfigUpdateEnabled)
 }
 
 func (ac *AppConfiguration) RegisterConfigurationUpdateListener(fhl configurationUpdateListenerFunc) {
@@ -147,16 +155,6 @@ func (ac *AppConfiguration) GetProperties() map[string]models.Property {
 		log.Error(messages.COLLECTION_INIT_ERROR)
 		return nil
 	}
-}
-
-func (ac *AppConfiguration) GetRegion() string {
-	return ac.region
-}
-func (ac *AppConfiguration) GetGuid() string {
-	return ac.guid
-}
-func (ac *AppConfiguration) GetApiKey() string {
-	return ac.apikey
 }
 func (ac *AppConfiguration) EnableDebug(enabled bool) {
 	if enabled {

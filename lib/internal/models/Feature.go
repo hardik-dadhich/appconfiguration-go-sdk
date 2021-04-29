@@ -31,7 +31,7 @@ type Feature struct {
 	Enabled_value  interface{}   `json:"enabled_value"`
 	Disabled_value interface{}   `json:"disabled_value"`
 	Segment_rules  []SegmentRule `json:"segment_rules"`
-	Enabled        bool          `json:"isEnabled"`
+	Enabled        bool          `json:"enabled"`
 }
 
 func (f *Feature) GetFeatureName() string {

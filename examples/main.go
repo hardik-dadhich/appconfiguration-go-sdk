@@ -18,7 +18,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 func main() {
 	appConfiguration := AppConfiguration.GetInstance()
 	appConfiguration.Init(AppConfiguration.REGION_US_SOUTH, "<guid>", "<apikey>")
-	appConfiguration.SetCollectionId("<collectionId>")
+	appConfiguration.SetContext("<collectionId>", "<environmentId>")
 	identityId := "user123"
 	identityAttributes := make(map[string]interface{})
 	identityAttributes["city"] = "Bangalore"

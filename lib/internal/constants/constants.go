@@ -18,3 +18,4 @@ package constants
 
 const FEATURE_FILE = "./appconfiguration.json"
 const DEFAULT_SEGMENT_ID = "$$null$$"
+const DEFAULT_USAGE_LIMIT = 25

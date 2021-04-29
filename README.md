@@ -25,7 +25,7 @@ properties for distributed applications centrally.
 
 ## Installation
 
-The current version of this SDK: 1.1.1
+The current version of this SDK: 2.0.0
 
 There are a few different ways to download and install the IBM App Configuration Go SDK project for use by your Go
 application:
@@ -57,7 +57,7 @@ Initialize the sdk to connect with your App Configuration service instance.
 ```go
 appConfiguration := AppConfiguration.GetInstance()
 appConfiguration.Init("region", "guid", "apikey")
-appConfiguration.SetCollectionId("collectionId")
+appConfiguration.SetContext("collectionId", "environmentId")
 ```
 
 - region : Region name where the App Configuration service instance is created. Use
@@ -68,8 +68,8 @@ appConfiguration.SetCollectionId("collectionId")
   Configuration dashboard.
 - apikey : ApiKey of the App Configuration service. Obtain it from the service credentials section of the App
   Configuration dashboard.
-
-* collectionId: Id of the collection created in App Configuration service instance.
+* collectionId: Id of the collection created in App Configuration service instance under the **Collections** section.
+* environmentId: Id of the environment created in App Configuration service instance under the **Environments** section.
 
 > Here, by default live update from the server is enabled. To turn off this mode see the [below section](#work-offline-with-local-configuration-file-optional)
 
@@ -77,14 +77,17 @@ appConfiguration.SetCollectionId("collectionId")
 
 You can also work offline with local configuration file and perform feature and property related operations.
 
-After setting the collection Id, follow the below steps
+After [`appConfiguration.Init("region", "guid", "apikey")`](#using-the-sdk), follow the below steps
 
 ```go
-appConfiguration.FetchConfigurationFromFile( "configurationFilePath", "liveConfigUpdateEnabled")
+appConfiguration.SetContext("collectionId", "environmentId", AppConfiguration.ContextOptions{
+  ConfigurationFile:       "path/to/configuration/file.json",
+  LiveConfigUpdateEnabled: false,
+})
 ```
 
-- configurationFilePath: Path to the JSON file, which contains configuration details.
-- liveConfigUpdateEnabled: Set this value to `false` if the new configuration values shouldn't be fetched from the
+- ConfigurationFile: Path to the JSON file, which contains configuration details.
+- LiveConfigUpdateEnabled: Set this value to `false` if the new configuration values shouldn't be fetched from the
   server. Make sure to provide a proper JSON file in the path. By default, this value is enabled.
 
 ## Get single feature
@@ -171,7 +174,7 @@ propertyVal := property.GetCurrentValue(identityId, identityAttributes)
 To listen to the data changes add the following code in your application
 
 ```go
-appConfiguration.RegisterConfigurationUpdateListener(func() {
+appConfiguration.RegisterConfigurationUpdateListener(func () {
     fmt.Println("Get your feature/property value now ")
 })
 ```
