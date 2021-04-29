@@ -25,8 +25,6 @@ properties for distributed applications centrally.
 
 ## Installation
 
-The current version of this SDK: 2.0.0
-
 There are a few different ways to download and install the IBM App Configuration Go SDK project for use by your Go
 application:
 
