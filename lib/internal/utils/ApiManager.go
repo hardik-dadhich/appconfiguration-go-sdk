@@ -72,6 +72,7 @@ func (ap *ApiManager) setRequestBody(body map[string]string) {
 }
 
 func (ap *ApiManager) ExecuteApiCall() (string, int) {
+	defer GracefullyHandleError()
 	log.Debug(messages.EXEC_API_CALL)
 	client := &http.Client{}
 	if len(ap.body) > 0 {

@@ -18,6 +18,7 @@ package lib
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -125,6 +126,7 @@ func (ch *ConfigurationHandler) fetchFromApi() {
 }
 
 func (ch *ConfigurationHandler) startWebSocket() {
+	defer utils.GracefullyHandleError()
 	log.Debug(messages.START_WEB_SOCKET)
 	apiKey := ch.apikey
 	h := http.Header{"Authorization": []string{apiKey}}
@@ -134,25 +136,32 @@ func (ch *ConfigurationHandler) startWebSocket() {
 	}
 	ch.socketConnection, ch.socketConnectionResponse, err = websocket.DefaultDialer.Dial(ch.urlBuilder.GetWebSocketUrl(), h)
 	if err != nil {
-		log.Error(messages.WEB_SOCKET_CONNECT_ERR, err, ch.socketConnectionResponse.StatusCode)
-		log.Info(messages.RETRY_WEB_SCOKET_CONNECT)
+		if ch.socketConnectionResponse != nil {
+			log.Error(messages.WEB_SOCKET_CONNECT_ERR, err, ch.socketConnectionResponse.StatusCode)
+		}
 		go ch.startWebSocket()
+		return
 	}
 	// defer c.Close()
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		for {
-			_, message, err := ch.socketConnection.ReadMessage()
-			log.Debug(string(message))
-			if err != nil {
-				log.Error(messages.WEBSOCKET_ERROR_READING_MESSAGE, err.Error())
+			if ch.socketConnection != nil {
+				_, message, err := ch.socketConnection.ReadMessage()
+				log.Debug(string(message))
+				if err != nil {
+					log.Error(messages.WEBSOCKET_ERROR_READING_MESSAGE, err.Error())
+					go ch.startWebSocket()
+					return
+				}
+				if string(message) != "test message" {
+					log.Debug(messages.WEBSOCKET_RECEIVING_MESSAGE + string(message))
+					ch.fetchFromApi()
+				}
+			} else {
 				go ch.startWebSocket()
 				return
-			}
-			if string(message) != "test message" {
-				log.Debug(messages.WEBSOCKET_RECEIVING_MESSAGE + string(message))
-				ch.fetchFromApi()
 			}
 		}
 	}()
@@ -190,17 +199,17 @@ func (ch *ConfigurationHandler) loadConfigurations() {
 	ch.cache = models.GetCacheInstance()
 }
 
-func (ch *ConfigurationHandler) getFeatureActions(featureID string) models.Feature {
+func (ch *ConfigurationHandler) getFeatureActions(featureID string) (models.Feature, error) {
 	ch.loadConfigurations()
 	if ch.cache != nil && len(ch.cache.FeatureMap) > 0 {
 		if val, ok := ch.cache.FeatureMap[featureID]; ok {
-			return val
+			return val, nil
 		} else {
 			log.Error(messages.INVALID_FEATURE_ID, featureID)
-			return models.Feature{}
+			return models.Feature{}, errors.New(messages.ERROR_INVALID_FEATURE_ID + featureID)
 		}
 	} else {
-		return models.Feature{}
+		return models.Feature{}, errors.New(messages.ERROR_INVALID_FEATURE_ID + featureID)
 	}
 }
 func (ch *ConfigurationHandler) getFeatures() map[string]models.Feature {
@@ -209,10 +218,10 @@ func (ch *ConfigurationHandler) getFeatures() map[string]models.Feature {
 	}
 	return ch.cache.FeatureMap
 }
-func (ch *ConfigurationHandler) getFeature(featureID string) models.Feature {
+func (ch *ConfigurationHandler) getFeature(featureID string) (models.Feature, error) {
 	if ch.cache != nil && len(ch.cache.FeatureMap) > 0 {
 		if val, ok := ch.cache.FeatureMap[featureID]; ok {
-			return val
+			return val, nil
 		} else {
 			return ch.getFeatureActions(featureID)
 		}
@@ -221,17 +230,17 @@ func (ch *ConfigurationHandler) getFeature(featureID string) models.Feature {
 	}
 }
 
-func (ch *ConfigurationHandler) getPropertyActions(propertyID string) models.Property {
+func (ch *ConfigurationHandler) getPropertyActions(propertyID string) (models.Property, error) {
 	ch.loadConfigurations()
 	if ch.cache != nil && len(ch.cache.PropertyMap) > 0 {
 		if val, ok := ch.cache.PropertyMap[propertyID]; ok {
-			return val
+			return val, nil
 		} else {
 			log.Error(messages.INVALID_PROPERTY_ID, propertyID)
-			return models.Property{}
+			return models.Property{}, errors.New(messages.ERROR_INVALID_PROPERTY_ID + propertyID)
 		}
 	} else {
-		return models.Property{}
+		return models.Property{}, errors.New(messages.ERROR_INVALID_PROPERTY_ID + propertyID)
 	}
 }
 func (ch *ConfigurationHandler) getProperties() map[string]models.Property {
@@ -240,10 +249,10 @@ func (ch *ConfigurationHandler) getProperties() map[string]models.Property {
 	}
 	return ch.cache.PropertyMap
 }
-func (ch *ConfigurationHandler) getProperty(propertyID string) models.Property {
+func (ch *ConfigurationHandler) getProperty(propertyID string) (models.Property, error) {
 	if ch.cache != nil && len(ch.cache.PropertyMap) > 0 {
 		if val, ok := ch.cache.PropertyMap[propertyID]; ok {
-			return val
+			return val, nil
 		} else {
 			return ch.getPropertyActions(propertyID)
 		}

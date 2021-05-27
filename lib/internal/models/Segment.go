@@ -38,11 +38,11 @@ func (s *Segment) GetSegmentId() string {
 func (s *Segment) GetRules() []Rule {
 	return s.Rules
 }
-func (s *Segment) EvaluateRule(identity map[string]interface{}) bool {
+func (s *Segment) EvaluateRule(entityAttributes map[string]interface{}) bool {
 	log.Debug(messages.EVAL_SEGMENT_RULE)
 	defer utils.GracefullyHandleError()
 	for _, rule := range s.GetRules() {
-		if !rule.EvaluateRule(identity) {
+		if !rule.EvaluateRule(entityAttributes) {
 			return false
 		}
 	}

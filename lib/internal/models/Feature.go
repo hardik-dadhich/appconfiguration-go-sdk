@@ -55,26 +55,34 @@ func (f *Feature) IsEnabled() bool {
 func (f *Feature) GetSegmentRules() []SegmentRule {
 	return f.Segment_rules
 }
-func (f *Feature) GetCurrentValue(id string, identity map[string]interface{}) interface{} {
+func (f *Feature) GetCurrentValue(entityId string, entityAttributes map[string]interface{}) interface{} {
 	log.Debug(messages.RETRIEVING_FEATURE)
-	if len(id) <= 0 {
-		log.Error(messages.SET_IDENTITY_OBJECT_ID_ERROR)
+	if len(entityId) <= 0 {
+		log.Error(messages.SET_ENTITY_OBJECT_ID_ERROR)
 		return nil
 	}
 
-	val := f.featureEvaluation(id, identity)
-	return getTypeCastedValue(val, f.GetFeatureDataType())
+	if f.isFeatureValid() {
+		val := f.featureEvaluation(entityId, entityAttributes)
+		return getTypeCastedValue(val, f.GetFeatureDataType())
+	}
+	return nil
 }
-func (f *Feature) featureEvaluation(id string, identity map[string]interface{}) interface{} {
+func (f *Feature) isFeatureValid() bool {
+	return !(f.Name == "" || f.Feature_id == "" || f.DataType == "" || f.Enabled_value == nil || f.Disabled_value == nil)
+}
+func (f *Feature) featureEvaluation(entityId string, entityAttributes map[string]interface{}) interface{} {
 
 	var evaluatedSegmentId string = constants.DEFAULT_SEGMENT_ID
-	defer func() { utils.GetMeteringInstance().RecordEvaluation(f.GetFeatureId(), "", id, evaluatedSegmentId) }()
+	defer func() {
+		utils.GetMeteringInstance().RecordEvaluation(f.GetFeatureId(), "", entityId, evaluatedSegmentId)
+	}()
 
 	if f.IsEnabled() {
 		log.Debug(messages.EVALUATING_FEATURE)
 		defer utils.GracefullyHandleError()
 
-		if len(identity) < 0 {
+		if len(entityAttributes) < 0 {
 			log.Debug(f.GetEnabledValue())
 			return f.GetEnabledValue()
 		}
@@ -97,7 +105,7 @@ func (f *Feature) featureEvaluation(id string, identity map[string]interface{}) 
 				segmentRule := rulesMap[k]
 				for _, rule := range segmentRule.GetRules() {
 					for _, segmentKey := range rule.Segments {
-						if f.evaluateSegment(string(segmentKey), identity) {
+						if f.evaluateSegment(string(segmentKey), entityAttributes) {
 							evaluatedSegmentId = segmentKey
 							if segmentRule.GetValue() == "$default" {
 								log.Debug(messages.FEATURE_VALUE)
@@ -131,11 +139,11 @@ func (f *Feature) parseRules(segmentRules []SegmentRule) map[int]SegmentRule {
 	log.Debug(rulesMap)
 	return rulesMap
 }
-func (f *Feature) evaluateSegment(segmentKey string, identity map[string]interface{}) bool {
+func (f *Feature) evaluateSegment(segmentKey string, entityAttributes map[string]interface{}) bool {
 	log.Debug(messages.EVALUATING_SEGMENTS)
 	segment, ok := GetCacheInstance().SegmentMap[segmentKey]
 	if ok {
-		return segment.EvaluateRule(identity)
+		return segment.EvaluateRule(entityAttributes)
 	}
 	return false
 }

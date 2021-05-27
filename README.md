@@ -25,6 +25,8 @@ properties for distributed applications centrally.
 
 ## Installation
 
+The current version of this SDK: 0.1.0
+
 There are a few different ways to download and install the IBM App Configuration Go SDK project for use by your Go
 application:
 
@@ -55,7 +57,10 @@ Initialize the sdk to connect with your App Configuration service instance.
 ```go
 appConfiguration := AppConfiguration.GetInstance()
 appConfiguration.Init("region", "guid", "apikey")
-appConfiguration.SetContext("collectionId", "environmentId")
+
+collectionId := "airlines-webapp"
+environmentId := "dev"
+appConfiguration.SetContext(collectionId, environmentId)
 ```
 
 - region : Region name where the App Configuration service instance is created. Use
@@ -78,9 +83,9 @@ You can also work offline with local configuration file and perform feature and 
 After [`appConfiguration.Init("region", "guid", "apikey")`](#using-the-sdk), follow the below steps
 
 ```go
-appConfiguration.SetContext("collectionId", "environmentId", AppConfiguration.ContextOptions{
-  ConfigurationFile:       "path/to/configuration/file.json",
-  LiveConfigUpdateEnabled: false,
+appConfiguration.SetContext("airlines-webapp", "dev", AppConfiguration.ContextOptions{
+  ConfigurationFile:       "saflights/flights.json",
+  LiveConfigUpdateEnabled: false
 })
 ```
 
@@ -88,27 +93,32 @@ appConfiguration.SetContext("collectionId", "environmentId", AppConfiguration.Co
 - LiveConfigUpdateEnabled: Set this value to `false` if the new configuration values shouldn't be fetched from the
   server. Make sure to provide a proper JSON file in the path. By default, this value is enabled.
 
+### Permissions required by SDK
+  Add write permission for `non-root` users to `appconfiguration.json` file which is used as cache in AppConfiguration SDK.
+  AppConfiguration cache location will be the application root folder.
+
 ## Get single feature
 
 ```go
-feature := appConfiguration.GetFeature("featureId")
+feature, err := appConfiguration.GetFeature("online-check-in")
+if err == nil {
+    fmt.Println("Feature Name", feature.GetFeatureName())
+    fmt.Println("Feature Id", feature.GetFeatureId())
+    fmt.Println("Feature Type", feature.GetFeatureDataType())
 
-if (feature.IsEnabled()) {
+    if (feature.IsEnabled()) {
         // feature flag is enabled
-} else {
+    } else {
         // feature flag is disabled
+    }
 }
-fmt.Println("Feature Name", feature.GetFeatureName())
-fmt.Println("Feature Id", feature.GetFeatureId())
-fmt.Println("Feature Type", feature.GetFeatureDataType())
-fmt.Println("Feature is enabled", feature.IsEnabled())
 ```
 
 ## Get all features
 
 ```go
 features := appConfiguration.GetFeatures()
-feature := features["featureId"]
+feature := features["online-check-in"]
 
 fmt.Println("Feature Name", feature.GetFeatureName())
 fmt.Println("Feature Id", feature.GetFeatureId())
@@ -118,34 +128,35 @@ fmt.Println("Feature is enabled", feature.IsEnabled())
 
 ## Evaluate a feature
 
-You can use the ` feature.GetCurrentValue(identityId, identityAttributes)` method to evaluate the value of the feature
-flag. You should pass an unique identityId as the parameter to perform the feature flag evaluation. If the feature flag
+You can use the ` feature.GetCurrentValue(entityId, entityAttributes)` method to evaluate the value of the feature
+flag. You should pass an unique entityId as the parameter to perform the feature flag evaluation. If the feature flag
 is configured with segments in the App Configuration service, you can set the attributes values as a map.
 
 ```go
-identityId := "identityId"
-identityAttributes := make(map[string]interface{})
-identityAttributes["email"] = "ibm.com"
-identityAttributes["city"] = "Bangalore"
+entityId := "john_doe"
+entityAttributes := make(map[string]interface{})
+entityAttributes["city"] = "Bangalore"
+entityAttributes["country"] = "India"
 
-featureVal := feature.GetCurrentValue(identityId, identityAttributes)
+featureVal := feature.GetCurrentValue(entityId, entityAttributes)
 ```
 
 ## Get single property
 
 ```go
-property := appConfiguration.GetProperty("propertyId")
-
-fmt.Println("Property Name", property.GetPropertyName())
-fmt.Println("Property Id", property.GetPropertyId())
-fmt.Println("Property Type", property.GetPropertyDataType())
+property, err := appConfiguration.GetProperty("check-in-charges")
+if err == nil {
+    fmt.Println("Property Name", property.GetPropertyName())
+    fmt.Println("Property Id", property.GetPropertyId())
+    fmt.Println("Property Type", property.GetPropertyDataType())
+}
 ```
 
 ## Get all properties
 
 ```go
 properties := appConfiguration.GetProperties()
-property := properties["propertyId"]
+property := properties["check-in-charges"]
 
 fmt.Println("Property Name", property.GetPropertyName())
 fmt.Println("Property Id", property.GetPropertyId())
@@ -154,22 +165,22 @@ fmt.Println("Property Type", property.GetPropertyDataType())
 
 ## Evaluate a property
 
-You can use the ` property.GetCurrentValue(identityId, identityAttributes)` method to evaluate the value of the
-property. You should pass an unique identityId as the parameter to perform the property evaluation. If the property is
+You can use the ` property.GetCurrentValue(entityId, entityAttributes)` method to evaluate the value of the
+property. You should pass an unique entityId as the parameter to perform the property evaluation. If the property is
 configured with segments in the App Configuration service, you can set the attributes values as a map.
 
 ```go
-identityId := "identityId"
-identityAttributes := make(map[string]interface{})
-identityAttributes["email"] = "ibm.com"
-identityAttributes["city"] = "Bengaluru"
+entityId := "john_doe"
+entityAttributes := make(map[string]interface{})
+entityAttributes["city"] = "Bangalore"
+entityAttributes["country"] = "India"
 
-propertyVal := property.GetCurrentValue(identityId, identityAttributes)
+propertyVal := property.GetCurrentValue(entityId, entityAttributes)
 ```
 
 ## Set listener for feature or property data changes
 
-To listen to the data changes add the following code in your application
+To listen to the configurations changes in your App Configuration service instance, implement the `RegisterConfigurationUpdateListener` event listener as mentioned below 
 
 ```go
 appConfiguration.RegisterConfigurationUpdateListener(func () {

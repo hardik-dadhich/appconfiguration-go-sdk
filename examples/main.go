@@ -19,28 +19,33 @@ func main() {
 	appConfiguration := AppConfiguration.GetInstance()
 	appConfiguration.Init(AppConfiguration.REGION_US_SOUTH, "<guid>", "<apikey>")
 	appConfiguration.SetContext("<collectionId>", "<environmentId>")
-	identityId := "user123"
-	identityAttributes := make(map[string]interface{})
-	identityAttributes["city"] = "Bangalore"
-	identityAttributes["radius"] = 60
+	entityId := "user123"
+	entityAttributes := make(map[string]interface{})
+	entityAttributes["city"] = "Bangalore"
+	entityAttributes["radius"] = 60
 
-	appConfiguration.RegisterConfigurationUpdateListener(func() {
-
-		fmt.Println("\n\nFEATURE FLAG OPERATIONS\n")
-		feature := appConfiguration.GetFeature("<featureId>")
+	fmt.Println("\n\nFEATURE FLAG OPERATIONS\n")
+	feature, err := appConfiguration.GetFeature("<featureId>")
+	if err == nil {
 		fmt.Println("Feature Name:", feature.GetFeatureName())
 		fmt.Println("Feature Id:", feature.GetFeatureId())
 		fmt.Println("Feature Data type:", feature.GetFeatureDataType())
 		fmt.Println("Is Feature enabled?", feature.IsEnabled())
-		fmt.Println("Feature evaluated value is:", feature.GetCurrentValue(identityId, identityAttributes))
+		fmt.Println("Feature evaluated value is:", feature.GetCurrentValue(entityId, entityAttributes))
+	}
 
-		fmt.Println("\n\nPROPERTY OPERATIONS\n")
-		property := appConfiguration.GetProperty("<propertyId>")
+	fmt.Println("\n\nPROPERTY OPERATIONS\n")
+	property, err := appConfiguration.GetProperty("<propertyId>")
+	if err == nil {
 		fmt.Println("Property Name:", property.GetPropertyName())
 		fmt.Println("Property Id:", property.GetPropertyId())
 		fmt.Println("Property Data type:", property.GetPropertyDataType())
-		fmt.Println("Property evaluated value is:", property.GetCurrentValue(identityId, identityAttributes))
-
+		fmt.Println("Property evaluated value is:", property.GetCurrentValue(entityId, entityAttributes))
+	}
+	//whenever the configurations get changed/updated on the app configuration service instance the function inside this listener is triggered.
+	//So, to keep track of live changes to configurations use this listener.
+	appConfiguration.RegisterConfigurationUpdateListener(func() {
+		fmt.Println("configurations updated")
 	})
 
 	myRouter := mux.NewRouter().StrictSlash(true)
