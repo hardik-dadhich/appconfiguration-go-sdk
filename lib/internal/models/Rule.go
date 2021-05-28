@@ -63,8 +63,12 @@ func (r *Rule) operatorCheck(key interface{}, value interface{}) bool {
 			key, _ = getFloat(key)
 			value, _ = strconv.ParseFloat(value.(string), 64)
 			result = (key.(float64) == value.(float64))
+		} else if isBool(key) {
+			// compare boolean
+			key, _ = formatBool(key) //convert boolean true/false to string "true"/"false"
+			result = (key == value.(string))
 		} else {
-			// compare string or boolean
+			// compare string
 			result = (key == value)
 		}
 		break
@@ -127,6 +131,21 @@ func isNumber(val interface{}) bool {
 		return false
 	}
 }
+func isBool(val interface{}) bool {
+	switch val.(type) {
+	case bool:
+		return true
+	default:
+		return false
+	}
+}
+func formatBool(val interface{}) (string, error) {
+	if val == true {
+		return "true", nil
+	} else {
+		return "false", nil
+	}
+}
 func isString(val interface{}) bool {
 	return reflect.TypeOf(val).String() == "string"
 }
@@ -160,10 +179,10 @@ func getFloat(unk interface{}) (float64, error) {
 		return float64(0), nil
 	}
 }
-func (r *Rule) EvaluateRule(identity map[string]interface{}) bool {
+func (r *Rule) EvaluateRule(entityAttributes map[string]interface{}) bool {
 	defer utils.GracefullyHandleError()
 	var result = false
-	key, ok := identity[r.GetAttributeName()]
+	key, ok := entityAttributes[r.GetAttributeName()]
 	if !ok {
 		return false
 	}

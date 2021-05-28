@@ -47,25 +47,25 @@ func (f *Property) GetValue() interface{} {
 func (f *Property) GetSegmentRules() []SegmentRule {
 	return f.Segment_rules
 }
-func (f *Property) GetCurrentValue(id string, identity map[string]interface{}) interface{} {
+func (f *Property) GetCurrentValue(entityId string, entityAttributes map[string]interface{}) interface{} {
 	log.Debug(messages.RETRIEVING_PROPERTY)
-	if len(id) <= 0 {
-		log.Error(messages.SET_IDENTITY_OBJECT_ID_ERROR)
+	if len(entityId) <= 0 {
+		log.Error(messages.SET_ENTITY_OBJECT_ID_ERROR)
 		return nil
 	}
 
-	val := f.propertyEvaluation(id, identity)
+	val := f.propertyEvaluation(entityId, entityAttributes)
 	return getTypeCastedValue(val, f.GetPropertyDataType())
 }
-func (f *Property) propertyEvaluation(id string, identity map[string]interface{}) interface{} {
+func (f *Property) propertyEvaluation(entityId string, entityAttributes map[string]interface{}) interface{} {
 
 	var evaluatedSegmentId string = constants.DEFAULT_SEGMENT_ID
-	defer func() { utils.GetMeteringInstance().RecordEvaluation("", f.GetPropertyId(), id, evaluatedSegmentId) }()
+	defer func() { utils.GetMeteringInstance().RecordEvaluation("", f.GetPropertyId(), entityId, evaluatedSegmentId) }()
 
 	log.Debug(messages.EVALUATING_PROPERTY)
 	defer utils.GracefullyHandleError()
 
-	if len(identity) < 0 {
+	if len(entityAttributes) < 0 {
 		log.Debug(f.GetValue())
 		return f.GetValue()
 	}
@@ -88,7 +88,7 @@ func (f *Property) propertyEvaluation(id string, identity map[string]interface{}
 			segmentRule := rulesMap[k]
 			for _, rule := range segmentRule.GetRules() {
 				for _, segmentKey := range rule.Segments {
-					if f.evaluateSegment(string(segmentKey), identity) {
+					if f.evaluateSegment(string(segmentKey), entityAttributes) {
 						evaluatedSegmentId = segmentKey
 						if segmentRule.GetValue() == "$default" {
 							log.Debug(messages.PROPERTY_VALUE)
@@ -119,11 +119,11 @@ func (f *Property) parseRules(segmentRules []SegmentRule) map[int]SegmentRule {
 	log.Debug(rulesMap)
 	return rulesMap
 }
-func (f *Property) evaluateSegment(segmentKey string, identity map[string]interface{}) bool {
+func (f *Property) evaluateSegment(segmentKey string, entityAttributes map[string]interface{}) bool {
 	log.Debug(messages.EVALUATING_SEGMENTS)
 	segment, ok := GetCacheInstance().SegmentMap[segmentKey]
 	if ok {
-		return segment.EvaluateRule(identity)
+		return segment.EvaluateRule(entityAttributes)
 	}
 	return false
 }

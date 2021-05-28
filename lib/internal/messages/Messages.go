@@ -17,7 +17,7 @@
 package messages
 
 const REGION_ERROR = "Provide a valid region."
-const GUID_ERRROR = "Provide a valid guid."
+const GUID_ERROR = "Provide a valid guid."
 const APIKEY_ERROR = "Provide a valid apiKey."
 const COLLECTION_ID_VALUE_ERROR = "Provide a valid collectionId."
 const ENVIRONMENT_ID_VALUE_ERROR = "Provide a valid environmentId."
@@ -32,7 +32,7 @@ const FETCH_FROM_API_SDK_INIT_ERROR = "fetchFromAPI() - Configuration SDK not in
 const WEBSOCKET_ERROR_READING_MESSAGE = "Error while reading message from the socket."
 const WEBSOCKET_RECEIVING_MESSAGE = "Message received from socket."
 const CONFIGURATION_UPDATE_LISTENER_METHOD_ERROR = "Configuration update listener should me a method or a function."
-const SET_IDENTITY_OBJECT_ID_ERROR = "Provide Id as a first param to GetCurrentValue."
+const SET_ENTITY_OBJECT_ID_ERROR = "Provide entity Id as a first param to GetCurrentValue."
 const CONFIGURATION_HANDLER_INIT_ERROR = "Invalid action in ConfigurationHandler. You can perform this action only after a successful initialization. Check the initialization section for errors."
 const CREATING_NEW_API_MANAGER_INSTANCE = "Creating new API manager instance."
 
@@ -43,6 +43,8 @@ const FEATURE_VALUE = "Feature value."
 const EVALUATING_FEATURE = "Evaluating feature."
 const RETRIEVING_FEATURE = "Retrieving feature current value."
 const INVALID_FEATURE_ID = "Invalid feature id - "
+const ERROR_INVALID_FEATURE_ID = "error : invalid feature id "
+const ERROR_INVALID_FEATURE_ACTION = "error : feature object not initialized"
 
 //
 const PARSING_PROPERTY_RULES = "Parsing property rules."
@@ -50,6 +52,8 @@ const PROPERTY_VALUE = "Property value."
 const EVALUATING_PROPERTY = "Evaluating property."
 const RETRIEVING_PROPERTY = "Retrieving property current value."
 const INVALID_PROPERTY_ID = "Invalid property id - "
+const ERROR_INVALID_PROPERTY_ID = "error : invalid property id "
+const ERROR_INVALID_PROPERTY_ACTION = "error : property object not initialized"
 const EVAL_SEGMENT_RULE = "Evaluating segment rule."
 
 //
@@ -89,9 +93,12 @@ const FETCH_FROM_CONFIGURATION_FILE = "Fetching from configuration file."
 const FETCH_CONFIGURATION_DATA = "Fetching configuration data."
 const FETCH_FROM_API = "Fetching from API."
 const START_WEB_SOCKET = "Starting web socket connection."
-const WEB_SOCKET_CONNECT_ERR = "Error connecting to websocket "
+const WEB_SOCKET_CONNECT_ERR = "Error connecting to server "
 const RETRY_WEB_SCOKET_CONNECT = "Trying web socket connection again."
 const UNMARSHAL_JSON_ERR = "Error while unmarshalling JSON "
 const MARSHAL_JSON_ERR = "Error while marshalling JSON "
 
 const SET_IN_MEMORY_CACHE = "Setting memory cache."
+
+// ConfigurationFileEmpty : ConfigurationFileEmpty const
+const ConfigurationFileEmpty = " file is empty."

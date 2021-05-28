@@ -17,8 +17,10 @@
 package lib
 
 import (
-	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
+	"errors"
 	"os"
+
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/models"
@@ -60,10 +62,10 @@ func (ac *AppConfiguration) Init(region string, guid string, apikey string) {
 			log.Error(messages.REGION_ERROR)
 		}
 		if len(guid) == 0 {
-			log.Error(messages.APIKEY_ERROR)
+			log.Error(messages.GUID_ERROR)
 		}
 		if len(apikey) == 0 {
-			log.Error(messages.GUID_ERRROR)
+			log.Error(messages.APIKEY_ERROR)
 		}
 		return
 	}
@@ -100,11 +102,17 @@ func (ac *AppConfiguration) SetContext(collectionId string, environmentId string
 		return
 	}
 	ac.isInitializedConfig = true
-	if _, err := os.Stat(constants.FEATURE_FILE); os.IsNotExist(err) {
+	file, err := os.Stat(constants.FEATURE_FILE)
+	if os.IsNotExist(err) {
 		ac.configurationHandlerInstance.loadData()
 	} else {
-		ac.configurationHandlerInstance.loadConfigurations()
-		go ac.configurationHandlerInstance.loadData()
+		if file.Size() == 0 {
+			log.Error(constants.FEATURE_FILE + messages.ConfigurationFileEmpty)
+			ac.configurationHandlerInstance.loadData()
+		} else {
+			ac.configurationHandlerInstance.loadConfigurations()
+			go ac.configurationHandlerInstance.loadData()
+		}
 	}
 }
 
@@ -124,12 +132,12 @@ func (ac *AppConfiguration) RegisterConfigurationUpdateListener(fhl configuratio
 	}
 }
 
-func (ac *AppConfiguration) GetFeature(featureId string) models.Feature {
+func (ac *AppConfiguration) GetFeature(featureId string) (models.Feature, error) {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
 		return ac.configurationHandlerInstance.getFeature(featureId)
 	} else {
 		log.Error(messages.COLLECTION_INIT_ERROR)
-		return models.Feature{}
+		return models.Feature{}, errors.New(messages.ERROR_INVALID_FEATURE_ACTION)
 	}
 }
 func (ac *AppConfiguration) GetFeatures() map[string]models.Feature {
@@ -140,12 +148,12 @@ func (ac *AppConfiguration) GetFeatures() map[string]models.Feature {
 		return nil
 	}
 }
-func (ac *AppConfiguration) GetProperty(propertyId string) models.Property {
+func (ac *AppConfiguration) GetProperty(propertyId string) (models.Property, error) {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
 		return ac.configurationHandlerInstance.getProperty(propertyId)
 	} else {
 		log.Error(messages.COLLECTION_INIT_ERROR)
-		return models.Property{}
+		return models.Property{}, errors.New(messages.ERROR_INVALID_PROPERTY_ACTION)
 	}
 }
 func (ac *AppConfiguration) GetProperties() map[string]models.Property {

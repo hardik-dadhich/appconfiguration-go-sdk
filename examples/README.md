@@ -1,6 +1,6 @@
-# Sample Application
+# Example Application
 
-> **DISCLAIMER**: This is a guideline sample application and is used for demonstrative and illustrative purposes only. This is not a production ready code.
+> **DISCLAIMER**: This is a guideline example application and is used for demonstrative and illustrative purposes only. This is not a production ready code.
 
 ## Step 1: Create an instance of App Configuration service
 
@@ -89,7 +89,7 @@ Click Save rule & Add the targeting.
 ```
 - Use the `id` of default environment created on instance creation.
 
-- In the sample app, provide the collectionId, environmentId, featureId & propertyId in file [`main.go`](main.go#L23)
+- In the example app, provide the collectionId, environmentId, featureId & propertyId in file [`main.go`](main.go#L23)
 
 ## Step 4: Run the app
 
