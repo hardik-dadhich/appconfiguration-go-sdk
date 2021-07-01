@@ -16,21 +16,29 @@
 
 package models
 
+// RuleElem : RuleElem struct
 type RuleElem struct {
 	Segments []string
 }
+
+// SegmentRule : SegmentRule struct
 type SegmentRule struct {
 	Rules []RuleElem
 	Value interface{}
 	Order int
 }
 
+// GetRules : Get Rules
 func (sr *SegmentRule) GetRules() []RuleElem {
 	return sr.Rules
 }
+
+// GetValue : Get Value
 func (sr *SegmentRule) GetValue() interface{} {
 	return sr.Value
 }
+
+// GetOrder : Get Order
 func (sr *SegmentRule) GetOrder() int {
 	return sr.Order
 }

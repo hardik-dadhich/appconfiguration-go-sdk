@@ -16,89 +16,203 @@
 
 package messages
 
-const REGION_ERROR = "Provide a valid region."
-const GUID_ERROR = "Provide a valid guid."
-const APIKEY_ERROR = "Provide a valid apiKey."
-const COLLECTION_ID_VALUE_ERROR = "Provide a valid collectionId."
-const ENVIRONMENT_ID_VALUE_ERROR = "Provide a valid environmentId."
-const COLLECTION_ID_ERROR = "Invalid action. You can perform this action only after a successful initialization. Check the initialization section for errors."
-const COLLECTION_INIT_ERROR = "Invalid action. You can perform this action only after a successful initialization and setting the context. Check the Init and SetContext section for errors."
-const CONFIGURATION_FILE_NOT_FOUND_ERROR = "Provide configuration_file value when live_config_update_enabled is false."
-const INCORRECT_USAGE_OF_CONTEXT_OPTIONS = "Incorrect usage of context options. At most of one ContextOptions struct should be passed."
-const CONFIG_API_ERROR = "Invalid configuration. Verify the collectionId, environmentId, apikey, guid and region."
+// RegionError : RegionError const
+const RegionError = "Provide a valid region."
 
-// configurationHandler
-const FETCH_FROM_API_SDK_INIT_ERROR = "fetchFromAPI() - Configuration SDK not initialized with call to init."
-const WEBSOCKET_ERROR_READING_MESSAGE = "Error while reading message from the socket."
-const WEBSOCKET_RECEIVING_MESSAGE = "Message received from socket."
-const CONFIGURATION_UPDATE_LISTENER_METHOD_ERROR = "Configuration update listener should me a method or a function."
-const SET_ENTITY_OBJECT_ID_ERROR = "Provide entity Id as a first param to GetCurrentValue."
-const CONFIGURATION_HANDLER_INIT_ERROR = "Invalid action in ConfigurationHandler. You can perform this action only after a successful initialization. Check the initialization section for errors."
-const CREATING_NEW_API_MANAGER_INSTANCE = "Creating new API manager instance."
+// GUIDError : GUIDError const
+const GUIDError = "Provide a valid guid."
 
-//
-const PARSING_FEATURE_RULES = "Parsing feature rules."
-const EVALUATING_SEGMENTS = "Evaluating segments."
-const FEATURE_VALUE = "Feature value."
-const EVALUATING_FEATURE = "Evaluating feature."
-const RETRIEVING_FEATURE = "Retrieving feature current value."
-const INVALID_FEATURE_ID = "Invalid feature id - "
-const ERROR_INVALID_FEATURE_ID = "error : invalid feature id "
-const ERROR_INVALID_FEATURE_ACTION = "error : feature object not initialized"
+// ApikeyError : ApikeyError const
+const ApikeyError = "Provide a valid apiKey."
 
-//
-const PARSING_PROPERTY_RULES = "Parsing property rules."
-const PROPERTY_VALUE = "Property value."
-const EVALUATING_PROPERTY = "Evaluating property."
-const RETRIEVING_PROPERTY = "Retrieving property current value."
-const INVALID_PROPERTY_ID = "Invalid property id - "
-const ERROR_INVALID_PROPERTY_ID = "error : invalid property id "
-const ERROR_INVALID_PROPERTY_ACTION = "error : property object not initialized"
-const EVAL_SEGMENT_RULE = "Evaluating segment rule."
+// CollectionIDValueError : CollectionIDValueError const
+const CollectionIDValueError = "Provide a valid collectionId."
 
-//
-const EXEC_API_CALL = "Executing API call."
-const API_CALL_ERROR = "Error executing API call "
+// EnvironmentIDValueError : EnvironmentIDValueError const
+const EnvironmentIDValueError = "Provide a valid environmentId."
 
-//
-const ENCODE_JSON_ERR = "Error while encoding json "
-const WRITE_FILE_ERR = "Error while writing to a file "
-const READ_FILE_ERR = "Error while reading file "
+// CollectionIDError : CollectionIDError const
+const CollectionIDError = "Invalid action. You can perform this action only after a successful initialization. Check the initialization section for errors."
 
-//
-const STORE_FILE = "Storing file."
-const READ_FILE = "Reading file."
+// CollectionInitError : CollectionInitError const
+const CollectionInitError = "Invalid action. You can perform this action only after a successful initialization and setting the context. Check the Init and SetContext section for errors."
 
-//
-const RETRIEVE_METERING_INSTANCE = "Retrieving metering instance."
-const START_SENDING_METERING_DATA = "Start sending metering data in the background."
-const ADD_METERING = "Add metering."
-const RECORD_EVAL = "Record evaluation."
-const TEN_MIN_EXPIRY = "10 mins expired, sending metering data if any."
-const SEND_METERING_SERVER = "Sending to metering server."
-const SEND_METERING_SERVER_ERR = "Error while sending metering data to server "
+// ConfigurationFileNotFoundError : ConfigurationFileNotFoundError const
+const ConfigurationFileNotFoundError = "Provide configuration_file value when live_config_update_enabled is false."
 
-//
-const RETRIEVEING_APP_CONFIG = "Retrieving App Configuration instance."
-const CREATING_NEW_APP_CONFIG = "Creating new App Configuration instance."
-const APP_CONFIG_ALREADY_INSTANTIATED = "App Configuration instance is already instantiated."
-const SETTING_CONTEXT = "Setting context."
+// IncorrectUsageOfContextOptions : IncorrectUsageOfContextOptions const
+const IncorrectUsageOfContextOptions = "Incorrect usage of context options. At most of one ContextOptions struct should be passed."
 
-const LOADING_DATA = "Loading data."
-const CHECK_CONFIGURATION_FILE_PROVIDED = "Checking configuration file is provided by the user or not."
-const CONFIGURATION_FILE_PROVIDED = "User provided configuration file."
-const LOADING_CONFIGURATIONS = "Loading configurations."
-const LIVE_UPDATE_CHECK = "Checking live configuration update is enabled or not."
-const FETCH_FROM_CONFIGURATION_FILE = "Fetching from configuration file."
-const FETCH_CONFIGURATION_DATA = "Fetching configuration data."
-const FETCH_FROM_API = "Fetching from API."
-const START_WEB_SOCKET = "Starting web socket connection."
-const WEB_SOCKET_CONNECT_ERR = "Error connecting to server "
-const RETRY_WEB_SCOKET_CONNECT = "Trying web socket connection again."
-const UNMARSHAL_JSON_ERR = "Error while unmarshalling JSON "
-const MARSHAL_JSON_ERR = "Error while marshalling JSON "
+// ConfigAPIError : ConfigAPIError const
+const ConfigAPIError = "Invalid configuration. Verify the collectionId, environmentId, apikey, guid and region."
 
-const SET_IN_MEMORY_CACHE = "Setting memory cache."
+// FetchFromAPISdkInitError : FetchFromAPISdkInitError const
+const FetchFromAPISdkInitError = "fetchFromAPI() - Configuration SDK not initialized with call to init."
+
+// WebsocketErrorReadingMessage : WebsocketErrorReadingMessage const
+const WebsocketErrorReadingMessage = "Error while reading message from the socket."
+
+// WebsocketReceivingMessage : WebsocketReceivingMessage const
+const WebsocketReceivingMessage = "Message received from socket."
+
+// ConfigurationUpdateListenerMethodError : ConfigurationUpdateListenerMethodError const
+const ConfigurationUpdateListenerMethodError = "Configuration update listener should me a method or a function."
+
+// SetEntityObjectIDError : SetEntityObjectIDError const
+const SetEntityObjectIDError = "Provide entity Id as a first param to GetCurrentValue."
+
+// ConfigurationHandlerInitError : ConfigurationHandlerInitError const
+const ConfigurationHandlerInitError = "Invalid action in ConfigurationHandler. You can perform this action only after a successful initialization. Check the initialization section for errors."
+
+// CreatingNewAPIManagerInstance : CreatingNewAPIManagerInstance const
+const CreatingNewAPIManagerInstance = "Creating new API manager instance."
+
+// ParsingFeatureRules : ParsingFeatureRules const
+const ParsingFeatureRules = "Parsing feature rules."
+
+// EvaluatingSegments : EvaluatingSegments const
+const EvaluatingSegments = "Evaluating segments."
+
+// FeatureValue : FeatureValue const
+const FeatureValue = "Feature value."
+
+// EvaluatingFeature : EvaluatingFeature const
+const EvaluatingFeature = "Evaluating feature."
+
+// RetrievingFeature : RetrievingFeature const
+const RetrievingFeature = "Retrieving feature current value."
+
+// InvalidFeatureID : InvalidFeatureID const
+const InvalidFeatureID = "Invalid feature id - "
+
+// ErrorInvalidFeatureID : ErrorInvalidFeatureID const
+const ErrorInvalidFeatureID = "error : invalid feature id "
+
+// ErrorInvalidFeatureAction : ErrorInvalidFeatureAction const
+const ErrorInvalidFeatureAction = "error : feature object not initialized"
+
+// ParsingPropertyRules : ParsingPropertyRules const
+const ParsingPropertyRules = "Parsing property rules."
+
+// PropertyValue : PropertyValue const
+const PropertyValue = "Property value."
+
+// EvaluatingProperty : EvaluatingProperty const
+const EvaluatingProperty = "Evaluating property."
+
+// RetrievingProperty : RetrievingProperty const
+const RetrievingProperty = "Retrieving property current value."
+
+// InvalidPropertyID : InvalidPropertyID const
+const InvalidPropertyID = "Invalid property id - "
+
+// ErrorInvalidPropertyID : ErrorInvalidPropertyID const
+const ErrorInvalidPropertyID = "error : invalid property id "
+
+// ErrorInvalidPropertyAction : ErrorInvalidPropertyAction const
+const ErrorInvalidPropertyAction = "error : property object not initialized"
+
+// EvalSegmentRule : EvalSegmentRule const
+const EvalSegmentRule = "Evaluating segment rule."
+
+// ExecAPICall : ExecAPICall const
+const ExecAPICall = "Executing API call."
+
+// APICallError : APICallError const
+const APICallError = "Error executing API call "
+
+// EncodeJSONErr : EncodeJSONErr const
+const EncodeJSONErr = "Error while encoding json "
+
+// WriteFileErr : WriteFileErr const
+const WriteFileErr = "Error while writing to a file "
+
+// ReadFileErr : ReadFileErr const
+const ReadFileErr = "Error while reading file "
+
+// StoreFile : StoreFile const
+const StoreFile = "Storing file."
+
+// ReadFile : ReadFile const
+const ReadFile = "Reading file."
+
+// RetrieveMeteringInstance : RetrieveMeteringInstance const
+const RetrieveMeteringInstance = "Retrieving metering instance."
+
+// StartSendingMeteringData : StartSendingMeteringData const
+const StartSendingMeteringData = "Start sending metering data in the background."
+
+// AddMetering : AddMetering const
+const AddMetering = "Add metering."
+
+// RecordEval : RecordEval const
+const RecordEval = "Record evaluation."
+
+// TenMinExpiry : TenMinExpiry const
+const TenMinExpiry = "10 mins expired, sending metering data if any."
+
+// SendMeteringServer : SendMeteringServer const
+const SendMeteringServer = "Sending to metering server."
+
+// SendMeteringSuccess : SendMeteringSuccess const
+const SendMeteringSuccess = "Successfully sent metering data to server."
+
+// SendMeteringServerErr : SendMeteringServerErr const
+const SendMeteringServerErr = "Error while sending metering data to server "
+
+// RetrieveingAppConfig : RetrieveingAppConfig const
+const RetrieveingAppConfig = "Retrieving App Configuration instance."
+
+// CreatingNewAppConfig : CreatingNewAppConfig const
+const CreatingNewAppConfig = "Creating new App Configuration instance."
+
+// AppConfigAlreadyInstantiated : AppConfigAlreadyInstantiated const
+const AppConfigAlreadyInstantiated = "App Configuration instance is already instantiated."
+
+// SettingContext : SettingContext const
+const SettingContext = "Setting context."
+
+// LoadingData : LoadingData const
+const LoadingData = "Loading data."
+
+// CheckConfigurationFileProvided : CheckConfigurationFileProvided const
+const CheckConfigurationFileProvided = "Checking configuration file is provided by the user or not."
+
+// ConfigurationFileProvided : ConfigurationFileProvided const
+const ConfigurationFileProvided = "User provided configuration file."
+
+// LoadingConfigurations : LoadingConfigurations const
+const LoadingConfigurations = "Loading configurations."
+
+// LiveUpdateCheck : LiveUpdateCheck const
+const LiveUpdateCheck = "Checking live configuration update is enabled or not."
+
+// FetchFromConfigurationFile : FetchFromConfigurationFile const
+const FetchFromConfigurationFile = "Fetching from configuration file."
+
+// FetchConfigurationData : FetchConfigurationData const
+const FetchConfigurationData = "Fetching configuration data."
+
+// FetchFromAPI : FetchFromAPI const
+const FetchFromAPI = "Fetching from API."
+
+// StartWebSocket : StartWebSocket const
+const StartWebSocket = "Starting web socket connection."
+
+// WebSocketConnectErr : WebSocketConnectErr const
+const WebSocketConnectErr = "Error connecting to server "
+
+// RetryWebSocketConnect : RetryWebSocketConnect const
+const RetryWebSocketConnect = "Trying web socket connection again."
+
+// UnmarshalJSONErr : UnmarshalJSONErr const
+const UnmarshalJSONErr = "Error while unmarshalling JSON "
+
+// MarshalJSONErr : MarshalJSONErr const
+const MarshalJSONErr = "Error while marshalling JSON "
+
+// SetInMemoryCache : SetInMemoryCache const
+const SetInMemoryCache = "Setting memory cache."
 
 // ConfigurationFileEmpty : ConfigurationFileEmpty const
 const ConfigurationFileEmpty = " file is empty."

@@ -24,21 +24,28 @@ import (
 	utils "github.com/IBM/appconfiguration-go-sdk/lib/internal/utils"
 )
 
+// Rule : Rule struct
 type Rule struct {
-	Values         []interface{} `json:"values"`
-	Operator       string
-	Attribute_Name string
+	Values        []interface{} `json:"values"`
+	Operator      string
+	AttributeName string `json:"Attribute_Name"`
 }
 
+// GetValues : Get Values
 func (r *Rule) GetValues() []interface{} {
 	return r.Values
 }
+
+// GetOperator : Get Operator
 func (r *Rule) GetOperator() string {
 	return r.Operator
 }
+
+// GetAttributeName : Get Attribute Name
 func (r *Rule) GetAttributeName() string {
-	return r.Attribute_Name
+	return r.AttributeName
 }
+
 func (r *Rule) operatorCheck(key interface{}, value interface{}) bool {
 
 	var result bool = false
@@ -142,9 +149,8 @@ func isBool(val interface{}) bool {
 func formatBool(val interface{}) (string, error) {
 	if val == true {
 		return "true", nil
-	} else {
-		return "false", nil
 	}
+	return "false", nil
 }
 func isString(val interface{}) bool {
 	return reflect.TypeOf(val).String() == "string"
@@ -179,6 +185,8 @@ func getFloat(unk interface{}) (float64, error) {
 		return float64(0), nil
 	}
 }
+
+// EvaluateRule : Evaluate Rule
 func (r *Rule) EvaluateRule(entityAttributes map[string]interface{}) bool {
 	defer utils.GracefullyHandleError()
 	var result = false

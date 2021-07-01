@@ -19,27 +19,34 @@ package models
 import (
 	messages "github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
 	utils "github.com/IBM/appconfiguration-go-sdk/lib/internal/utils"
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
 )
 
-// log "github.com/sirupsen/logrus"
-
+// Segment : Segment struct
 type Segment struct {
-	Name       string `json:"name"`
-	Segment_id string `json:"segment_id"`
-	Rules      []Rule `json:"rules"`
+	Name      string `json:"name"`
+	SegmentID string `json:"segment_id"`
+	Rules     []Rule `json:"rules"`
 }
 
+// GetName : Get Name
 func (s *Segment) GetName() string {
 	return s.Name
 }
-func (s *Segment) GetSegmentId() string {
-	return s.Segment_id
+
+// GetSegmentID : Get SegmentID
+func (s *Segment) GetSegmentID() string {
+	return s.SegmentID
 }
+
+// GetRules : Get Rules
 func (s *Segment) GetRules() []Rule {
 	return s.Rules
 }
+
+// EvaluateRule : Evaluate Rule
 func (s *Segment) EvaluateRule(entityAttributes map[string]interface{}) bool {
-	log.Debug(messages.EVAL_SEGMENT_RULE)
+	log.Debug(messages.EvalSegmentRule)
 	defer utils.GracefullyHandleError()
 	for _, rule := range s.GetRules() {
 		if !rule.EvaluateRule(entityAttributes) {

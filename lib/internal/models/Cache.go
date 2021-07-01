@@ -19,25 +19,29 @@ package models
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
 )
 
+// Cache : Cache struct
 type Cache struct {
-	FeatureMap map[string]Feature
+	FeatureMap  map[string]Feature
 	PropertyMap map[string]Property
-	SegmentMap map[string]Segment
+	SegmentMap  map[string]Segment
 }
 
+// CacheInstance : Cache Instance
 var CacheInstance *Cache
-var log = logrus.New()
 
+// Init : init
 func init() {
 	if os.Getenv("ENABLE_DEBUG") == "true" {
-		log.SetLevel(logrus.DebugLevel)
+		log.SetLogLevel("debug")
 	} else {
-		log.SetLevel(logrus.InfoLevel)
+		log.SetLogLevel("info")
 	}
 }
+
+// SetCache : Set Cache
 func SetCache(featureMap map[string]Feature, propertyMap map[string]Property, segmentMap map[string]Segment) {
 	CacheInstance = new(Cache)
 	CacheInstance.FeatureMap = featureMap
@@ -46,6 +50,7 @@ func SetCache(featureMap map[string]Feature, propertyMap map[string]Property, se
 	log.Debug(CacheInstance)
 }
 
+// GetCacheInstance : Get Cache Instance
 func GetCacheInstance() *Cache {
 	return CacheInstance
 }

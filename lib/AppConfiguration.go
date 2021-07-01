@@ -20,52 +20,64 @@ import (
 	"errors"
 	"os"
 
-	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
-
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/models"
-
-	"github.com/sirupsen/logrus"
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
 )
 
+// AppConfiguration : Struct having init and configInstance.
 type AppConfiguration struct {
 	isInitialized                bool
 	isInitializedConfig          bool
 	configurationHandlerInstance *ConfigurationHandler
 }
+
+// ContextOptions : Struct having configFilePath and liveUpdateFlag.
 type ContextOptions struct {
 	ConfigurationFile       string
 	LiveConfigUpdateEnabled bool
 }
 
 var appConfigurationInstance *AppConfiguration
+
+// OverrideServerHost : Override server host
 var OverrideServerHost = ""
-var log = logrus.New()
-var REGION_US_SOUTH = "us-south"
-var REGION_EU_GB = "eu-gb"
-var REGION_AU_SYD = "au-syd"
+
+// var log = logrus.New()
+
+// REGION_US_SOUTH : Dallas Region
+const REGION_US_SOUTH = "us-south"
+
+// REGION_EU_GB : London Region
+const REGION_EU_GB = "eu-gb"
+
+// REGION_AU_SYD : Sydney Region
+const REGION_AU_SYD = "au-syd"
 
 func init() {
-	log.SetLevel(logrus.InfoLevel)
+	log.SetLogLevel("info")
 }
+
+// GetInstance : Get App Configuration Instance
 func GetInstance() *AppConfiguration {
-	log.Debug(messages.RETRIEVEING_APP_CONFIG)
+	log.Debug(messages.RetrieveingAppConfig)
 	if appConfigurationInstance == nil {
 		appConfigurationInstance = new(AppConfiguration)
 	}
 	return appConfigurationInstance
 }
 
+// Init : Init App Configuration Instance
 func (ac *AppConfiguration) Init(region string, guid string, apikey string) {
 	if len(region) == 0 || len(guid) == 0 || len(apikey) == 0 {
 		if len(region) == 0 {
-			log.Error(messages.REGION_ERROR)
+			log.Error(messages.RegionError)
 		}
 		if len(guid) == 0 {
-			log.Error(messages.GUID_ERROR)
+			log.Error(messages.GUIDError)
 		}
 		if len(apikey) == 0 {
-			log.Error(messages.APIKEY_ERROR)
+			log.Error(messages.ApikeyError)
 		}
 		return
 	}
@@ -74,102 +86,105 @@ func (ac *AppConfiguration) Init(region string, guid string, apikey string) {
 	ac.isInitialized = true
 }
 
-func (ac *AppConfiguration) SetContext(collectionId string, environmentId string, options ...ContextOptions) {
-	log.Debug(messages.SETTING_CONTEXT)
+// SetContext : Set Context
+func (ac *AppConfiguration) SetContext(collectionID string, environmentID string, options ...ContextOptions) {
+	log.Debug(messages.SettingContext)
 	if !ac.isInitialized {
-		log.Error(messages.COLLECTION_ID_ERROR)
+		log.Error(messages.CollectionIDError)
 		return
 	}
-	if len(collectionId) == 0 {
-		log.Error(messages.COLLECTION_ID_VALUE_ERROR)
+	if len(collectionID) == 0 {
+		log.Error(messages.CollectionIDValueError)
 		return
 	}
-	if len(environmentId) == 0 {
-		log.Error(messages.ENVIRONMENT_ID_VALUE_ERROR)
+	if len(environmentID) == 0 {
+		log.Error(messages.EnvironmentIDValueError)
 		return
 	}
 	switch len(options) {
 	case 0:
-		ac.configurationHandlerInstance.SetContext(collectionId, environmentId, "", true)
+		ac.configurationHandlerInstance.SetContext(collectionID, environmentID, "", true)
 	case 1:
 		if !options[0].LiveConfigUpdateEnabled && len(options[0].ConfigurationFile) == 0 {
-			log.Error(messages.CONFIGURATION_FILE_NOT_FOUND_ERROR)
+			log.Error(messages.ConfigurationFileNotFoundError)
 			return
 		}
-		ac.configurationHandlerInstance.SetContext(collectionId, environmentId, options[0].ConfigurationFile, options[0].LiveConfigUpdateEnabled)
+		ac.configurationHandlerInstance.SetContext(collectionID, environmentID, options[0].ConfigurationFile, options[0].LiveConfigUpdateEnabled)
 	default:
-		log.Error(messages.INCORRECT_USAGE_OF_CONTEXT_OPTIONS)
+		log.Error(messages.IncorrectUsageOfContextOptions)
 		return
 	}
 	ac.isInitializedConfig = true
-	file, err := os.Stat(constants.FEATURE_FILE)
-	if os.IsNotExist(err) {
+	// If the cache is not having data make a blocking call and load the data in in-memory cache , else use the existing cache data and asynchronously update it.
+	// This scenario can happen if the user uses setcontext second time in the code , in that case cache would not be empty.
+	if ac.configurationHandlerInstance.cache == nil {
 		ac.configurationHandlerInstance.loadData()
 	} else {
-		if file.Size() == 0 {
-			log.Error(constants.FEATURE_FILE + messages.ConfigurationFileEmpty)
-			ac.configurationHandlerInstance.loadData()
-		} else {
-			ac.configurationHandlerInstance.loadConfigurations()
-			go ac.configurationHandlerInstance.loadData()
-		}
+		go ac.configurationHandlerInstance.loadData()
 	}
 }
 
+// FetchConfigurations : Fetch Configurations
 func (ac *AppConfiguration) FetchConfigurations() {
 	if ac.isInitialized && ac.isInitializedConfig {
 		go ac.configurationHandlerInstance.loadData()
 	} else {
-		log.Error(messages.COLLECTION_INIT_ERROR)
+		log.Error(messages.CollectionInitError)
 	}
 }
 
+// RegisterConfigurationUpdateListener : Register Configuration Update Listener
 func (ac *AppConfiguration) RegisterConfigurationUpdateListener(fhl configurationUpdateListenerFunc) {
 	if ac.isInitialized && ac.isInitializedConfig {
 		ac.configurationHandlerInstance.registerConfigurationUpdateListener(fhl)
 	} else {
-		log.Error(messages.COLLECTION_INIT_ERROR)
+		log.Error(messages.CollectionInitError)
 	}
 }
 
-func (ac *AppConfiguration) GetFeature(featureId string) (models.Feature, error) {
+// GetFeature : Get Feature
+func (ac *AppConfiguration) GetFeature(featureID string) (models.Feature, error) {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
-		return ac.configurationHandlerInstance.getFeature(featureId)
-	} else {
-		log.Error(messages.COLLECTION_INIT_ERROR)
-		return models.Feature{}, errors.New(messages.ERROR_INVALID_FEATURE_ACTION)
+		return ac.configurationHandlerInstance.getFeature(featureID)
 	}
+	log.Error(messages.CollectionInitError)
+	return models.Feature{}, errors.New(messages.ErrorInvalidFeatureAction)
 }
+
+// GetFeatures : Get Features
 func (ac *AppConfiguration) GetFeatures() map[string]models.Feature {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
 		return ac.configurationHandlerInstance.getFeatures()
-	} else {
-		log.Error(messages.COLLECTION_INIT_ERROR)
-		return nil
 	}
+	log.Error(messages.CollectionInitError)
+	return nil
 }
-func (ac *AppConfiguration) GetProperty(propertyId string) (models.Property, error) {
+
+// GetProperty : Get Property
+func (ac *AppConfiguration) GetProperty(propertyID string) (models.Property, error) {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
-		return ac.configurationHandlerInstance.getProperty(propertyId)
-	} else {
-		log.Error(messages.COLLECTION_INIT_ERROR)
-		return models.Property{}, errors.New(messages.ERROR_INVALID_PROPERTY_ACTION)
+		return ac.configurationHandlerInstance.getProperty(propertyID)
 	}
+	log.Error(messages.CollectionInitError)
+	return models.Property{}, errors.New(messages.ErrorInvalidPropertyAction)
 }
+
+// GetProperties : Get Properties
 func (ac *AppConfiguration) GetProperties() map[string]models.Property {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
 		return ac.configurationHandlerInstance.getProperties()
-	} else {
-		log.Error(messages.COLLECTION_INIT_ERROR)
-		return nil
 	}
+	log.Error(messages.CollectionInitError)
+	return nil
 }
+
+// EnableDebug : Enable Debug
 func (ac *AppConfiguration) EnableDebug(enabled bool) {
 	if enabled {
-		log.SetLevel(logrus.DebugLevel)
 		os.Setenv("ENABLE_DEBUG", "true")
+		log.SetLogLevel("debug")
 	} else {
-		log.SetLevel(logrus.InfoLevel)
 		os.Setenv("ENABLE_DEBUG", "false")
+		log.SetLogLevel("info")
 	}
 }
