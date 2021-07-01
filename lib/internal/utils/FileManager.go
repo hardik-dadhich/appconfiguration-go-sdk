@@ -17,46 +17,20 @@
 package utils
 
 import (
-	constants "github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 	messages "github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
-	"os"
 
-	"encoding/json"
 	"io/ioutil"
+
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
 )
 
-const featureFile = constants.FEATURE_FILE
-
-func StoreFiles(content string) {
-	log.Debug(messages.STORE_FILE)
-
-	file, err := json.MarshalIndent(json.RawMessage(content), "", "\t")
-	if err != nil {
-		log.Error(messages.ENCODE_JSON_ERR, err)
-		return
-	}
-	err = ioutil.WriteFile(featureFile, (file), 0644)
-	if err != nil {
-		log.Error(messages.WRITE_FILE_ERR, err)
-		return
-	}
-
-}
-
+// ReadFiles reads file from the file path
 func ReadFiles(filePath string) []byte {
-	log.Debug(messages.READ_FILE)
-	fileToRead := featureFile
-	if len(filePath) > 0 {
-		fileToRead = filePath
-	}
-	if _, err := os.Stat(fileToRead); os.IsNotExist(err) {
-		// file does not exists
-		return []byte(`{}`)
-	}
-	file, err := ioutil.ReadFile(fileToRead)
+	log.Debug(messages.ReadFile)
+	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Error(messages.READ_FILE_ERR, err)
-		return nil
+		log.Error(messages.ReadFileErr, err)
+		return []byte(`{}`)
 	}
 	return file
 }

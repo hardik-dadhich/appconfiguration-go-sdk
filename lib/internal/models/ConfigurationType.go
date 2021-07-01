@@ -17,8 +17,11 @@
 package models
 
 var (
+	// NUMERIC : NUMERIC var
 	NUMERIC string = "NUMERIC"
+	// STRING : STRING var
 	STRING  string = "STRING"
+	// BOOLEAN : BOOLEAN var
 	BOOLEAN string = "BOOLEAN"
 )
 

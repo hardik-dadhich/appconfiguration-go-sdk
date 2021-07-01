@@ -25,7 +25,7 @@ properties for distributed applications centrally.
 
 ## Installation
 
-The current version of this SDK: 0.1.0
+The current version of this SDK: 0.1.1
 
 There are a few different ways to download and install the IBM App Configuration Go SDK project for use by your Go
 application:
@@ -93,17 +93,13 @@ appConfiguration.SetContext("airlines-webapp", "dev", AppConfiguration.ContextOp
 - LiveConfigUpdateEnabled: Set this value to `false` if the new configuration values shouldn't be fetched from the
   server. Make sure to provide a proper JSON file in the path. By default, this value is enabled.
 
-### Permissions required by SDK
-  Add write permission for `non-root` users to `appconfiguration.json` file which is used as cache in AppConfiguration SDK.
-  AppConfiguration cache location will be the application root folder.
-
 ## Get single feature
 
 ```go
 feature, err := appConfiguration.GetFeature("online-check-in")
 if err == nil {
     fmt.Println("Feature Name", feature.GetFeatureName())
-    fmt.Println("Feature Id", feature.GetFeatureId())
+    fmt.Println("Feature Id", feature.GetFeatureID())
     fmt.Println("Feature Type", feature.GetFeatureDataType())
 
     if (feature.IsEnabled()) {
@@ -121,7 +117,7 @@ features := appConfiguration.GetFeatures()
 feature := features["online-check-in"]
 
 fmt.Println("Feature Name", feature.GetFeatureName())
-fmt.Println("Feature Id", feature.GetFeatureId())
+fmt.Println("Feature Id", feature.GetFeatureID())
 fmt.Println("Feature Type", feature.GetFeatureDataType())
 fmt.Println("Feature is enabled", feature.IsEnabled())
 ```
@@ -147,7 +143,7 @@ featureVal := feature.GetCurrentValue(entityId, entityAttributes)
 property, err := appConfiguration.GetProperty("check-in-charges")
 if err == nil {
     fmt.Println("Property Name", property.GetPropertyName())
-    fmt.Println("Property Id", property.GetPropertyId())
+    fmt.Println("Property Id", property.GetPropertyID())
     fmt.Println("Property Type", property.GetPropertyDataType())
 }
 ```
@@ -159,7 +155,7 @@ properties := appConfiguration.GetProperties()
 property := properties["check-in-charges"]
 
 fmt.Println("Property Name", property.GetPropertyName())
-fmt.Println("Property Id", property.GetPropertyId())
+fmt.Println("Property Id", property.GetPropertyID())
 fmt.Println("Property Type", property.GetPropertyDataType())
 ```
 

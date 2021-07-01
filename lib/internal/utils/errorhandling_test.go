@@ -14,10 +14,30 @@
  * limitations under the License.
  */
 
-package models
+package utils
 
-// Collection : Collection struct
-type Collection struct {
-	Name         string `json:"name"`
-	CollectionID string `json:"collection_id"`
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestErrorHandling(t *testing.T) {
+
+	// do a division with error handling support
+	result := divideWithErrorHandling(1, 0)
+	assert.Equal(t, 0, result)
+
+	// do a division with error handling support
+	assert.Panics(t, func() { divideWithoutErrorHandling(1, 0) }, "The code did not panic")
+
+}
+
+func divideWithErrorHandling(m int, n int) int {
+	defer GracefullyHandleError()
+	return m / n
+}
+
+func divideWithoutErrorHandling(m int, n int) int {
+	return m / n
 }

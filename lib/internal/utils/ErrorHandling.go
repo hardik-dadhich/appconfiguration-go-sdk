@@ -16,6 +16,11 @@
 
 package utils
 
+import (
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
+)
+
+// GracefullyHandleError : Gracefully Handle Error
 func GracefullyHandleError() {
 	if r := recover(); r != nil {
 		err := r.(error)

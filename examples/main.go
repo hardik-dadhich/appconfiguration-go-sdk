@@ -19,7 +19,7 @@ func main() {
 	appConfiguration := AppConfiguration.GetInstance()
 	appConfiguration.Init(AppConfiguration.REGION_US_SOUTH, "<guid>", "<apikey>")
 	appConfiguration.SetContext("<collectionId>", "<environmentId>")
-	entityId := "user123"
+	entityID := "user123"
 	entityAttributes := make(map[string]interface{})
 	entityAttributes["city"] = "Bangalore"
 	entityAttributes["radius"] = 60
@@ -28,19 +28,19 @@ func main() {
 	feature, err := appConfiguration.GetFeature("<featureId>")
 	if err == nil {
 		fmt.Println("Feature Name:", feature.GetFeatureName())
-		fmt.Println("Feature Id:", feature.GetFeatureId())
+		fmt.Println("Feature Id:", feature.GetFeatureID())
 		fmt.Println("Feature Data type:", feature.GetFeatureDataType())
 		fmt.Println("Is Feature enabled?", feature.IsEnabled())
-		fmt.Println("Feature evaluated value is:", feature.GetCurrentValue(entityId, entityAttributes))
+		fmt.Println("Feature evaluated value is:", feature.GetCurrentValue(entityID, entityAttributes))
 	}
 
 	fmt.Println("\n\nPROPERTY OPERATIONS\n")
 	property, err := appConfiguration.GetProperty("<propertyId>")
 	if err == nil {
 		fmt.Println("Property Name:", property.GetPropertyName())
-		fmt.Println("Property Id:", property.GetPropertyId())
+		fmt.Println("Property Id:", property.GetPropertyID())
 		fmt.Println("Property Data type:", property.GetPropertyDataType())
-		fmt.Println("Property evaluated value is:", property.GetCurrentValue(entityId, entityAttributes))
+		fmt.Println("Property evaluated value is:", property.GetCurrentValue(entityID, entityAttributes))
 	}
 	//whenever the configurations get changed/updated on the app configuration service instance the function inside this listener is triggered.
 	//So, to keep track of live changes to configurations use this listener.

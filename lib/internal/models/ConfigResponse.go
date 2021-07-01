@@ -16,6 +16,7 @@
 
 package models
 
+// ConfigResponse : ConfigResponse struct
 type ConfigResponse struct {
 	Features   []Feature
 	Properties []Property

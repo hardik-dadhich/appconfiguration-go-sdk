@@ -16,6 +16,11 @@
 
 package constants
 
-const FEATURE_FILE = "./appconfiguration.json"
-const DEFAULT_SEGMENT_ID = "$$null$$"
-const DEFAULT_USAGE_LIMIT = 25
+// DefaultSegmentID : Default Segment ID
+const DefaultSegmentID = "$$null$$"
+
+// DefaultUsageLimit : Default Usage Limit
+const DefaultUsageLimit = 25
+
+// UserAgent specifies the user agent name
+const UserAgent = "appconfiguration-go-sdk/0.1.1"
