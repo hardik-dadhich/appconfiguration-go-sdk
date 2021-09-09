@@ -140,14 +140,14 @@ func TestGetFeature(t *testing.T) {
 func TestGetFeatures(t *testing.T) {
 	// test get features when not initialised properly
 	ac := GetInstance()
-	features := ac.GetFeatures()
-	assert.Nil(t, features)
+	_, err := ac.GetFeatures()
+	assert.Error(t, err, "Expected GetFeatures to return error")
 	reset(ac)
 
 	// test get features when config has been initialized properly and feature exists in the cache
 	mockInit(ac)
 	mockSetCache(ac)
-	features = ac.GetFeatures()
+	features, err := ac.GetFeatures()
 	if assert.NotNil(t, features) {
 		assert.Equal(t, "discountOnBikes", features["FID1"].Name)
 	}
@@ -171,17 +171,17 @@ func TestGetProperty(t *testing.T) {
 }
 
 func TestGetProperties(t *testing.T) {
-	// test get features when not initialised properly
+	// test get properties when not initialised properly
 	ac := GetInstance()
-	features := ac.GetProperties()
-	assert.Nil(t, features)
+	_, err := ac.GetProperties()
+	assert.Error(t, err, "Expected GetProperties to return error")
 	reset(ac)
-	// test get features when config has been initialized properly and feature exists in the cache
+	// test get properties when config has been initialized properly and property exists in the cache
 	mockInit(ac)
 	mockSetCache(ac)
-	features = ac.GetProperties()
-	if assert.NotNil(t, features) {
-		assert.Equal(t, "nodeReplica", features["PID1"].Name)
+	properties, err := ac.GetProperties()
+	if assert.NotNil(t, properties) {
+		assert.Equal(t, "nodeReplica", properties["PID1"].Name)
 	}
 	reset(ac)
 }

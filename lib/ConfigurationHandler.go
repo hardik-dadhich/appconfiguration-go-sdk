@@ -232,11 +232,11 @@ func (ch *ConfigurationHandler) getFeatureActions(featureID string) (models.Feat
 	}
 	return models.Feature{}, errors.New(messages.ErrorInvalidFeatureID + featureID)
 }
-func (ch *ConfigurationHandler) getFeatures() map[string]models.Feature {
+func (ch *ConfigurationHandler) getFeatures() (map[string]models.Feature, error) {
 	if ch.cache == nil {
-		return map[string]models.Feature{}
+		return nil, errors.New(messages.InitError)
 	}
-	return ch.cache.FeatureMap
+	return ch.cache.FeatureMap, nil
 }
 func (ch *ConfigurationHandler) getFeature(featureID string) (models.Feature, error) {
 	if ch.cache != nil && len(ch.cache.FeatureMap) > 0 {
@@ -259,11 +259,11 @@ func (ch *ConfigurationHandler) getPropertyActions(propertyID string) (models.Pr
 	}
 	return models.Property{}, errors.New(messages.ErrorInvalidPropertyID + propertyID)
 }
-func (ch *ConfigurationHandler) getProperties() map[string]models.Property {
+func (ch *ConfigurationHandler) getProperties() (map[string]models.Property, error) {
 	if ch.cache == nil {
-		return map[string]models.Property{}
+		return nil, errors.New(messages.InitError)
 	}
-	return ch.cache.PropertyMap
+	return ch.cache.PropertyMap, nil
 }
 func (ch *ConfigurationHandler) getProperty(propertyID string) (models.Property, error) {
 	if ch.cache != nil && len(ch.cache.PropertyMap) > 0 {

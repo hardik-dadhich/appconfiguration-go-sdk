@@ -23,4 +23,4 @@ const DefaultSegmentID = "$$null$$"
 const DefaultUsageLimit = 25
 
 // UserAgent specifies the user agent name
-const UserAgent = "appconfiguration-go-sdk/0.1.1"
+const UserAgent = "appconfiguration-go-sdk/0.2.0"

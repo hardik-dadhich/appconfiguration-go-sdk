@@ -289,12 +289,12 @@ func TestConfigHandlerGetProperties(t *testing.T) {
 	ch := GetConfigurationHandlerInstance()
 	data := `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"ShowAd","property_id":"show-ad","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
 	ch.saveInCache(data)
-	val := ch.getProperties()
+	val, _ := ch.getProperties()
 	assert.Equal(t, "ShowAd", val["show-ad"].Name)
 
 	// when cache is
 	ch.cache = nil
-	val = ch.getProperties()
+	val, _ = ch.getProperties()
 	assert.Equal(t, 0, len(val))
 
 }
@@ -325,12 +325,12 @@ func TestConfigHandlerGetFeatures(t *testing.T) {
 	ch := GetConfigurationHandlerInstance()
 	data := `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"ShowAd","property_id":"show-ad","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
 	ch.saveInCache(data)
-	val := ch.getFeatures()
+	val, _ := ch.getFeatures()
 	assert.Equal(t, "Cycle Rentals8", val["cycle-rentals8"].Name)
 
 	// when cache is nil
 	ch.cache = nil
-	val = ch.getFeatures()
+	val, _ = ch.getFeatures()
 	assert.Equal(t, 0, len(val))
 
 }

@@ -208,6 +208,9 @@ const RetryWebSocketConnect = "Trying web socket connection again."
 // UnmarshalJSONErr : UnmarshalJSONErr const
 const UnmarshalJSONErr = "Error while unmarshalling JSON "
 
+// UnmarshalYAMLErr : UnmarshalYAMLErr const
+const UnmarshalYAMLErr = "Error while unmarshalling YAML "
+
 // MarshalJSONErr : MarshalJSONErr const
 const MarshalJSONErr = "Error while marshalling JSON "
 
@@ -216,3 +219,15 @@ const SetInMemoryCache = "Setting memory cache."
 
 // ConfigurationFileEmpty : ConfigurationFileEmpty const
 const ConfigurationFileEmpty = " file is empty."
+
+// InitError : Caused due to initialization error
+const InitError = "error: configurations not fetched, check the init and setcontext section for errors"
+
+// InvalidDataType : Invalid Datatype
+const InvalidDataType = "Invalid datatype: "
+
+// InvalidDataFormat : Invalid Data Format
+const InvalidDataFormat = "Invalid data format"
+
+// TypeCastingError : Type Casting Error
+const TypeCastingError = "Error Type casting. Check the feature or property values."
