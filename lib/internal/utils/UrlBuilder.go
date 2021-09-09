@@ -99,7 +99,7 @@ func (ub *URLBuilder) GetWebSocketURL() string {
 
 // GetToken returns the string "Bearer <token>"
 func (ub *URLBuilder) GetToken() string {
-	req, _ := http.NewRequest("GET", "http://localhost", nil)
+	req, _ := http.NewRequest("GET", "https://localhost", nil)
 	var err error
 	err = ub.authenticator.Authenticate(req)
 	if err != nil {

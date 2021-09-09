@@ -152,12 +152,12 @@ func (ac *AppConfiguration) GetFeature(featureID string) (models.Feature, error)
 }
 
 // GetFeatures : Get Features
-func (ac *AppConfiguration) GetFeatures() map[string]models.Feature {
+func (ac *AppConfiguration) GetFeatures() (map[string]models.Feature, error) {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
 		return ac.configurationHandlerInstance.getFeatures()
 	}
 	log.Error(messages.CollectionInitError)
-	return nil
+	return nil, errors.New(messages.InitError)
 }
 
 // GetProperty : Get Property
@@ -170,12 +170,12 @@ func (ac *AppConfiguration) GetProperty(propertyID string) (models.Property, err
 }
 
 // GetProperties : Get Properties
-func (ac *AppConfiguration) GetProperties() map[string]models.Property {
+func (ac *AppConfiguration) GetProperties() (map[string]models.Property, error) {
 	if ac.isInitializedConfig == true && ac.configurationHandlerInstance != nil {
 		return ac.configurationHandlerInstance.getProperties()
 	}
 	log.Error(messages.CollectionInitError)
-	return nil
+	return nil, errors.New(messages.InitError)
 }
 
 // EnableDebug : Enable Debug
