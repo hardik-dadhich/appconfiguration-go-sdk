@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -51,26 +50,30 @@ func TestInitConfigurationHandlerInstance(t *testing.T) {
 }
 func TestConfigHandlerSetContext(t *testing.T) {
 	// test set context when initialised properly
+	F := false
 	ch := GetConfigurationHandlerInstance()
-	ch.SetContext("c1", "dev", "flights.json", false)
+	ch.SetContext("c1", "dev", ContextOptions{
+		BootstrapFile:           "flights.json",
+		LiveConfigUpdateEnabled: &F,
+	})
 	assert.Equal(t, "c1", ch.collectionID)
 	assert.Equal(t, "dev", ch.environmentID)
-	assert.Equal(t, "flights.json", ch.configurationFile)
+	assert.Equal(t, "flights.json", ch.bootstrapFile)
 	assert.Equal(t, false, ch.liveConfigUpdateEnabled)
 }
 
 func TestSaveCache(t *testing.T) {
-	// test save feature when when empty data is passed.
+	// test save feature when empty data is passed.
 	ch := GetConfigurationHandlerInstance()
 	data := `{"Features":null,"Properties":null,"Collection":{"name":"","collection_id":""},"Segments":null}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	assert.Equal(t, 0, len(ch.cache.FeatureMap))
 	assert.Equal(t, 0, len(ch.cache.PropertyMap))
 	assert.Equal(t, 0, len(ch.cache.SegmentMap))
 
-	// test save feature when when non empty data is passed.
+	// test save feature when non-empty data is passed.
 	data = `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"p1","property_id":"p1","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	assert.Equal(t, 1, len(ch.cache.FeatureMap))
 	assert.Equal(t, 1, len(ch.cache.PropertyMap))
 	assert.Equal(t, 2, len(ch.cache.SegmentMap))
@@ -129,30 +132,28 @@ func TestFetchApi(t *testing.T) {
 	resetConfigurationHandler(ch)
 }
 
-func TestGetFileData(t *testing.T) {
+func TestUpdateCacheAndListener(t *testing.T) {
 	mockLogger()
-	// create a sample comfiguration file for testing and populate with valid data but no listener method provided
-	createSampleConfigurationFile("test.json", `{ "features": [ { "name": "Cycle Rentals", "feature_id": "cycle-rentals", "type": "BOOLEAN", "enabled_value": true, "disabled_value": false, "segment_rules": [], "enabled": true } ], "properties": [ { "name": "Show Ad", "property_id": "show-ad", "tags": "", "type": "BOOLEAN", "value": false, "segment_rules": [], "created_time": "2021-05-26T06:23:18Z", "updated_time": "2021-06-08T03:38:38Z", "evaluation_time": "2021-06-03T10:08:46Z" } ], "segments": [ { "name": "beta-users", "segment_id": "knliu818", "rules": [ { "values": [ "ibm.com" ], "operator": "contains", "attribute_name": "email" } ] }, { "name": "ibm employees", "segment_id": "ka761hap", "rules": [ { "values": [ "ibm.com", "in.ibm.com" ], "operator": "endsWith", "attribute_name": "email" } ] } ] }`)
+	// valid data but no listener method provided
+	data := `{ "features": [ { "name": "Cycle Rentals", "feature_id": "cycle-rentals", "type": "BOOLEAN", "enabled_value": true, "disabled_value": false, "segment_rules": [], "enabled": true } ], "properties": [ { "name": "Show Ad", "property_id": "show-ad", "tags": "", "type": "BOOLEAN", "value": false, "segment_rules": [], "created_time": "2021-05-26T06:23:18Z", "updated_time": "2021-06-08T03:38:38Z", "evaluation_time": "2021-06-03T10:08:46Z" } ], "segments": [ { "name": "beta-users", "segment_id": "knliu818", "rules": [ { "values": [ "ibm.com" ], "operator": "contains", "attribute_name": "email" } ] }, { "name": "ibm employees", "segment_id": "ka761hap", "rules": [ { "values": [ "ibm.com", "in.ibm.com" ], "operator": "endsWith", "attribute_name": "email" } ] } ] }`
 	ch := GetConfigurationHandlerInstance()
 	ch.Init("us-south", "abc", "abc")
-	ch.getFileData("./test.json")
+	ch.updateCacheAndListener([]byte(data))
 	assert.Equal(t, 1, len(ch.cache.FeatureMap))
 	assert.Equal(t, 1, len(ch.cache.PropertyMap))
 	assert.Equal(t, 2, len(ch.cache.SegmentMap))
 	assert.Equal(t, "Cycle Rentals", ch.cache.FeatureMap["cycle-rentals"].Name)
 	assert.Equal(t, "Show Ad", ch.cache.PropertyMap["show-ad"].Name)
-	deleteFile("test.json")
 	resetConfigurationHandler(ch)
 
-	// create a sample comfiguration file for testing and populate with valid data and  listener method provided
-	createSampleConfigurationFile("test.json", `{ "features": [ { "name": "Cycle Rentals", "feature_id": "cycle-rentals", "type": "BOOLEAN", "enabled_value": true, "disabled_value": false, "segment_rules": [], "enabled": true } ], "properties": [ { "name": "Show Ad", "property_id": "show-ad", "tags": "", "type": "BOOLEAN", "value": false, "segment_rules": [], "created_time": "2021-05-26T06:23:18Z", "updated_time": "2021-06-08T03:38:38Z", "evaluation_time": "2021-06-03T10:08:46Z" } ], "segments": [ { "name": "beta-users", "segment_id": "knliu818", "rules": [ { "values": [ "ibm.com" ], "operator": "contains", "attribute_name": "email" } ] }, { "name": "ibm employees", "segment_id": "ka761hap", "rules": [ { "values": [ "ibm.com", "in.ibm.com" ], "operator": "endsWith", "attribute_name": "email" } ] } ] }`)
+	// valid data and listener method provided
 	ch = GetConfigurationHandlerInstance()
 	ch.Init("us-south", "abc", "abc")
 	msg := ""
 	ch.configurationUpdateListener = func() {
 		msg = "Latest evaluation done."
 	}
-	ch.getFileData("./test.json")
+	ch.updateCacheAndListener([]byte(data))
 	assert.Equal(t, "Latest evaluation done.", msg)
 
 	assert.Equal(t, 1, len(ch.cache.FeatureMap))
@@ -160,21 +161,19 @@ func TestGetFileData(t *testing.T) {
 	assert.Equal(t, 2, len(ch.cache.SegmentMap))
 	assert.Equal(t, "Cycle Rentals", ch.cache.FeatureMap["cycle-rentals"].Name)
 	assert.Equal(t, "Show Ad", ch.cache.PropertyMap["show-ad"].Name)
-	deleteFile("test.json")
 	resetConfigurationHandler(ch)
 
-	// create a sample comfiguration file for testing and populate with invalid data
-	createSampleConfigurationFile("test.json", "<not a valid json>")
+	// invalid data
+	data = "<not a valid json>"
 	ch = GetConfigurationHandlerInstance()
 	ch.Init("us-south", "abc", "abc")
-	ch.getFileData("./test.json")
+	ch.updateCacheAndListener([]byte(data))
 	if hook.LastEntry().Message != "AppConfiguration - Error while unmarshalling JSON invalid character '<' looking for beginning of value" {
 		t.Errorf("Test failed: Incorrect error message")
 	}
 	assert.Equal(t, 0, len(ch.cache.FeatureMap))
 	assert.Equal(t, 0, len(ch.cache.PropertyMap))
 	assert.Equal(t, 0, len(ch.cache.SegmentMap))
-	deleteFile("test.json")
 	resetConfigurationHandler(ch)
 
 }
@@ -266,7 +265,7 @@ func TestConfigHandlerGetProperty(t *testing.T) {
 	// when property id exists in the cache
 	ch := GetConfigurationHandlerInstance()
 	data := `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"ShowAd","property_id":"show-ad","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	val, _ := ch.getProperty("show-ad")
 	assert.Equal(t, "ShowAd", val.Name)
 
@@ -277,7 +276,7 @@ func TestConfigHandlerGetProperty(t *testing.T) {
 
 	// when cache is empty
 	data = `{"Features":null,"Properties":null,"Collection":{"name":"","collection_id":""},"Segments":null}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	val, err = ch.getProperty("show-ad")
 	assert.Equal(t, "", val.Name)
 	assert.Equal(t, "error : invalid property id show-ad", fmt.Sprint(err))
@@ -288,7 +287,7 @@ func TestConfigHandlerGetProperties(t *testing.T) {
 	// when property id exists in the cache
 	ch := GetConfigurationHandlerInstance()
 	data := `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"ShowAd","property_id":"show-ad","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	val, _ := ch.getProperties()
 	assert.Equal(t, "ShowAd", val["show-ad"].Name)
 
@@ -303,7 +302,7 @@ func TestConfigHandlerGetFeature(t *testing.T) {
 	// when property id exists in the cache
 	ch := GetConfigurationHandlerInstance()
 	data := `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"ShowAd","property_id":"show-ad","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	val, _ := ch.getFeature("cycle-rentals8")
 	assert.Equal(t, "Cycle Rentals8", val.Name)
 
@@ -314,7 +313,7 @@ func TestConfigHandlerGetFeature(t *testing.T) {
 
 	// when cache is empty
 	data = `{"Features":null,"Properties":null,"Collection":{"name":"","collection_id":""},"Segments":null}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	val, err = ch.getFeature("cycle-rentals8")
 	assert.Equal(t, "", val.Name)
 	assert.Equal(t, "error : invalid feature id cycle-rentals8", fmt.Sprint(err))
@@ -324,7 +323,7 @@ func TestConfigHandlerGetFeatures(t *testing.T) {
 	// when property id exists in the cache
 	ch := GetConfigurationHandlerInstance()
 	data := `{"features":[{"name":"Cycle Rentals8","feature_id":"cycle-rentals8","type":"BOOLEAN","enabled_value":true,"disabled_value":false,"segment_rules":[],"enabled":true}],"properties":[{"name":"ShowAd","property_id":"show-ad","tags":"","type":"BOOLEAN","value":false,"segment_rules":[],"created_time":"2021-05-26T06:23:18Z","updated_time":"2021-06-08T03:38:38Z","evaluation_time":"2021-06-03T10:08:46Z"}],"segments":[{"name":"beta-users","segment_id":"knliu818","rules":[{"values":["ibm.com"],"operator":"contains","attribute_name":"email"}]},{"name":"ibm employees","segment_id":"ka761hap","rules":[{"values":["ibm.com","in.ibm.com"],"operator":"endsWith","attribute_name":"email"}]}]}`
-	ch.saveInCache(data)
+	ch.saveInCache([]byte(data))
 	val, _ := ch.getFeatures()
 	assert.Equal(t, "Cycle Rentals8", val["cycle-rentals8"].Name)
 
@@ -352,28 +351,6 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-}
-func createSampleConfigurationFile(filePath string, content string) {
-	f, err := os.Create(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer f.Close()
-
-	_, err2 := f.WriteString(content)
-
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-
-}
-func deleteFile(filePath string) {
-	err := os.Remove("./test.json")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 }
 func resetConfigurationHandler(ch *ConfigurationHandler) {
 	ch.cache = new(models.Cache)

@@ -17,21 +17,20 @@
 package lib
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"net/http"
-	"sync"
-	"time"
-
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/models"
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils"
-	"github.com/IBM/go-sdk-core/v5/core"
-
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
+	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/gorilla/websocket"
+	"net/http"
+	"path"
+	"sync"
+	"time"
 )
 
 type configurationUpdateListenerFunc func()
@@ -48,8 +47,10 @@ type ConfigurationHandler struct {
 	appConfig                   *AppConfiguration
 	cache                       *models.Cache
 	configurationUpdateListener configurationUpdateListenerFunc
-	configurationFile           string
+	persistentCacheDirectory    string
+	bootstrapFile               string
 	liveConfigUpdateEnabled     bool
+	persistentData              []byte
 	retryCount                  int
 	retryInterval               int64
 	socketConnection            *websocket.Conn
@@ -75,14 +76,15 @@ func (ch *ConfigurationHandler) Init(region, guid, apikey string) {
 }
 
 // SetContext : Set Context
-func (ch *ConfigurationHandler) SetContext(collectionID, environmentID, configurationFile string, liveConfigUpdateEnabled bool) {
+func (ch *ConfigurationHandler) SetContext(collectionID, environmentID string, options ContextOptions) {
 	ch.collectionID = collectionID
 	ch.environmentID = environmentID
 	ch.urlBuilder = utils.GetInstance()
 	ch.urlBuilder.Init(ch.collectionID, ch.environmentID, ch.region, ch.guid, ch.apikey, OverrideServerHost)
 	utils.GetMeteringInstance().Init(ch.guid, environmentID, collectionID)
-	ch.configurationFile = configurationFile
-	ch.liveConfigUpdateEnabled = liveConfigUpdateEnabled
+	ch.persistentCacheDirectory = options.PersistentCacheDirectory
+	ch.bootstrapFile = options.BootstrapFile
+	ch.liveConfigUpdateEnabled = options.LiveConfigUpdateEnabled
 	ch.isInitialized = true
 	ch.retryCount = 3
 	ch.retryInterval = 600
@@ -91,14 +93,31 @@ func (ch *ConfigurationHandler) loadData() {
 	if !ch.isInitialized {
 		log.Error(messages.ConfigurationHandlerInitError)
 	}
-	log.Debug(messages.LoadingData)
-	log.Debug(messages.CheckConfigurationFileProvided)
-	if len(ch.configurationFile) > 0 {
-		log.Debug(messages.ConfigurationFileProvided)
-		ch.getFileData(ch.configurationFile)
+	if len(ch.persistentCacheDirectory) > 0 {
+		ch.persistentData = utils.ReadFiles(path.Join(ch.persistentCacheDirectory, constants.ConfigurationFile))
+		if !bytes.Equal(ch.persistentData, []byte(`{}`)) {
+			// no updating the listener here. Only updating cache is enough
+			ch.saveInCache(ch.persistentData)
+		}
 	}
-	log.Debug(messages.LiveUpdateCheck)
-	log.Debug(fmt.Sprint(ch.liveConfigUpdateEnabled))
+	if len(ch.bootstrapFile) > 0 {
+		log.Debug(messages.BootstrapFileProvided)
+		if len(ch.persistentCacheDirectory) > 0 {
+			if bytes.Equal(ch.persistentData, []byte(`{}`)) {
+				bootstrapFileData := utils.ReadFiles(ch.bootstrapFile)
+				go utils.StoreFiles(string(bootstrapFileData), ch.persistentCacheDirectory)
+				ch.updateCacheAndListener(bootstrapFileData)
+			} else {
+				// update the only listener here. Because, cache is already updated above (line 100)
+				if ch.configurationUpdateListener != nil {
+					ch.configurationUpdateListener()
+				}
+			}
+		} else {
+			bootstrapFileData := utils.ReadFiles(ch.bootstrapFile)
+			ch.updateCacheAndListener(bootstrapFileData)
+		}
+	}
 	if ch.liveConfigUpdateEnabled {
 		ch.FetchConfigurationData()
 	}
@@ -112,11 +131,11 @@ func (ch *ConfigurationHandler) FetchConfigurationData() {
 		go ch.startWebSocket()
 	}
 }
-func (ch *ConfigurationHandler) saveInCache(data string) {
+func (ch *ConfigurationHandler) saveInCache(data []byte) {
 	ch.mu.Lock()
 	defer ch.mu.Unlock()
 	configResponse := models.ConfigResponse{}
-	err := json.Unmarshal([]byte(data), &configResponse)
+	err := json.Unmarshal(data, &configResponse)
 	if err != nil {
 		log.Error(messages.UnmarshalJSONErr, err)
 		return
@@ -140,6 +159,12 @@ func (ch *ConfigurationHandler) saveInCache(data string) {
 	models.SetCache(featureMap, propertyMap, segmentMap)
 	ch.cache = models.GetCacheInstance()
 }
+func (ch *ConfigurationHandler) updateCacheAndListener(data []byte) {
+	ch.saveInCache(data)
+	if ch.configurationUpdateListener != nil {
+		ch.configurationUpdateListener()
+	}
+}
 func (ch *ConfigurationHandler) fetchFromAPI() {
 	if ch.isInitialized {
 		ch.retryCount--
@@ -159,14 +184,24 @@ func (ch *ConfigurationHandler) fetchFromAPI() {
 		if response != nil && response.StatusCode >= 200 && response.StatusCode <= 299 {
 			if ch.liveConfigUpdateEnabled {
 				jsonData, _ := json.Marshal(response.Result)
-				ch.saveInCache(string(jsonData))
-				if ch.configurationUpdateListener != nil {
-					ch.configurationUpdateListener()
+				// asynchronously write the response to persistent volume, if enabled
+				if len(ch.persistentCacheDirectory) > 0 {
+					go utils.StoreFiles(string(jsonData), ch.persistentCacheDirectory)
 				}
+				// load the configurations in the response to cache maps
+				ch.updateCacheAndListener(jsonData)
 			}
 		} else {
 			if ch.retryCount > 0 {
-				log.Error(messages.ConfigAPIError)
+				if response != nil {
+					if response.Result != nil {
+						log.Error(response.Result)
+					} else {
+						log.Error(string(response.RawResult))
+					}
+				} else {
+					log.Error(messages.ConfigAPIError)
+				}
 				ch.fetchFromAPI()
 			} else {
 				ch.retryCount = 3
@@ -219,18 +254,6 @@ func (ch *ConfigurationHandler) startWebSocket() {
 			}
 		}
 	}()
-
-}
-
-func (ch *ConfigurationHandler) getFeatureActions(featureID string) (models.Feature, error) {
-	if ch.cache != nil && len(ch.cache.FeatureMap) > 0 {
-		if val, ok := ch.cache.FeatureMap[featureID]; ok {
-			return val, nil
-		}
-		log.Error(messages.InvalidFeatureID, featureID)
-		return models.Feature{}, errors.New(messages.ErrorInvalidFeatureID + featureID)
-	}
-	return models.Feature{}, errors.New(messages.ErrorInvalidFeatureID + featureID)
 }
 func (ch *ConfigurationHandler) getFeatures() (map[string]models.Feature, error) {
 	if ch.cache == nil {
@@ -243,21 +266,10 @@ func (ch *ConfigurationHandler) getFeature(featureID string) (models.Feature, er
 		if val, ok := ch.cache.FeatureMap[featureID]; ok {
 			return val, nil
 		}
-		return ch.getFeatureActions(featureID)
 	}
-	return ch.getFeatureActions(featureID)
+	log.Error(messages.InvalidFeatureID, featureID)
+	return models.Feature{}, errors.New(messages.ErrorInvalidFeatureID + featureID)
 
-}
-
-func (ch *ConfigurationHandler) getPropertyActions(propertyID string) (models.Property, error) {
-	if ch.cache != nil && len(ch.cache.PropertyMap) > 0 {
-		if val, ok := ch.cache.PropertyMap[propertyID]; ok {
-			return val, nil
-		}
-		log.Error(messages.InvalidPropertyID, propertyID)
-		return models.Property{}, errors.New(messages.ErrorInvalidPropertyID + propertyID)
-	}
-	return models.Property{}, errors.New(messages.ErrorInvalidPropertyID + propertyID)
 }
 func (ch *ConfigurationHandler) getProperties() (map[string]models.Property, error) {
 	if ch.cache == nil {
@@ -270,9 +282,9 @@ func (ch *ConfigurationHandler) getProperty(propertyID string) (models.Property,
 		if val, ok := ch.cache.PropertyMap[propertyID]; ok {
 			return val, nil
 		}
-		return ch.getPropertyActions(propertyID)
 	}
-	return ch.getPropertyActions(propertyID)
+	log.Error(messages.InvalidPropertyID, propertyID)
+	return models.Property{}, errors.New(messages.ErrorInvalidPropertyID + propertyID)
 }
 
 func (ch *ConfigurationHandler) registerConfigurationUpdateListener(chl configurationUpdateListenerFunc) {
@@ -285,25 +297,5 @@ func (ch *ConfigurationHandler) registerConfigurationUpdateListener(chl configur
 		ch.configurationUpdateListener = chl
 	} else {
 		log.Error(messages.CollectionIDError)
-	}
-}
-
-func (ch *ConfigurationHandler) getFileData(filePath string) {
-	data := utils.ReadFiles(filePath)
-	configResp := models.ConfigResponse{}
-	err := json.Unmarshal(data, &configResp)
-	if err != nil {
-		log.Error(messages.UnmarshalJSONErr, err)
-		return
-	}
-	log.Debug(fmt.Sprint(configResp))
-	out, err := json.Marshal(configResp)
-	if err != nil {
-		log.Error(messages.MarshalJSONErr, err)
-		return
-	}
-	ch.saveInCache(string(out))
-	if ch.configurationUpdateListener != nil {
-		ch.configurationUpdateListener()
 	}
 }
