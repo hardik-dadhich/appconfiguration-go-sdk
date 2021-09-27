@@ -32,10 +32,12 @@ type AppConfiguration struct {
 	configurationHandlerInstance *ConfigurationHandler
 }
 
-// ContextOptions : Struct having configFilePath and liveUpdateFlag.
+// ContextOptions : Struct having PersistentCacheDirectory path, BootstrapFile (ConfigurationFile) path and LiveConfigUpdateEnabled flag.
 type ContextOptions struct {
-	ConfigurationFile       string
-	LiveConfigUpdateEnabled bool
+	PersistentCacheDirectory string
+	BootstrapFile            string
+	ConfigurationFile        string
+	LiveConfigUpdateEnabled  bool
 }
 
 var appConfigurationInstance *AppConfiguration
@@ -103,13 +105,20 @@ func (ac *AppConfiguration) SetContext(collectionID string, environmentID string
 	}
 	switch len(options) {
 	case 0:
-		ac.configurationHandlerInstance.SetContext(collectionID, environmentID, "", true)
+		ac.configurationHandlerInstance.SetContext(collectionID, environmentID, ContextOptions{
+			LiveConfigUpdateEnabled: true,
+		})
 	case 1:
-		if !options[0].LiveConfigUpdateEnabled && len(options[0].ConfigurationFile) == 0 {
-			log.Error(messages.ConfigurationFileNotFoundError)
+		var temp = options[0]
+		if len(temp.ConfigurationFile) > 0 && len(temp.BootstrapFile) == 0 {
+			temp.BootstrapFile = temp.ConfigurationFile
+			log.Info(messages.ContextOptionsParameterDeprecation)
+		}
+		if !temp.LiveConfigUpdateEnabled && len(temp.BootstrapFile) == 0 {
+			log.Error(messages.BootstrapFileNotFoundError)
 			return
 		}
-		ac.configurationHandlerInstance.SetContext(collectionID, environmentID, options[0].ConfigurationFile, options[0].LiveConfigUpdateEnabled)
+		ac.configurationHandlerInstance.SetContext(collectionID, environmentID, temp)
 	default:
 		log.Error(messages.IncorrectUsageOfContextOptions)
 		return
