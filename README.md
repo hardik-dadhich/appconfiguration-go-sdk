@@ -205,3 +205,5 @@ folder to learn more about feature and property evaluation.
 
 This project is released under the Apache 2.0 license. The license's full text can be found
 in [LICENSE](https://github.com/IBM/appconfiguration-go-sdk/blob/master/LICENSE)
+
+added
