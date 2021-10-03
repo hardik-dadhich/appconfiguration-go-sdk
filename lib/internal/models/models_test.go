@@ -56,11 +56,13 @@ var feature = Feature{
 	DisabledValue: false,
 	Enabled:       true,
 	DataType:      "BOOLEAN",
+	Format:        "",
 	SegmentRules:  []SegmentRule{segmentRule},
 }
 
 var property = Property{
 	DataType:     "BOOLEAN",
+	Format:       "",
 	Name:         "propertyName",
 	PropertyID:   "propertyID",
 	Value:        true,
@@ -98,6 +100,9 @@ func TestFeature(t *testing.T) {
 	if feature.GetFeatureDataType() != "BOOLEAN" {
 		t.Error("Expected TestFeatureGetFeatureDataType test case to pass")
 	}
+	if feature.GetFeatureDataFormat() != "" {
+		t.Error("Expected TestFeatureGetFeatureDataFormat test case to pass")
+	}
 	if feature.GetEnabledValue() != true {
 		t.Error("Expected TestFeatureGetEnabledValue test case to pass")
 	}
@@ -116,12 +121,32 @@ func TestFeature(t *testing.T) {
 		t.Error("Expected TestFeatureGetCurrentValueBoolean test case to pass")
 	}
 	feature.DataType = "STRING"
+	feature.Format = "TEXT"
 	feature.EnabledValue = "EnabledValue"
 	feature.DisabledValue = "DisabledValue"
 	if feature.GetCurrentValue("entityID123", entityMap) != "EnabledValue" {
-		t.Error("Expected TestFeatureGetCurrentValueString test case to pass")
+		t.Error("Expected TestFeatureGetCurrentValueStringText test case to pass")
+	}
+	feature.DataType = "STRING"
+	feature.Format = "JSON"
+	enabledJSON := make(map[string]interface{})
+	enabledJSON["key"] = "enabled value"
+	feature.EnabledValue = enabledJSON
+	disabledJSON := make(map[string]interface{})
+	disabledJSON["key"] = "disabled value"
+	feature.DisabledValue = disabledJSON
+	if !reflect.DeepEqual(feature.GetCurrentValue("entityId123", entityMap), enabledJSON) {
+		t.Error("Expected TestFeatureGetCurrentValueStringJSON test case to pass")
+	}
+	feature.DataType = "STRING"
+	feature.Format = "YAML"
+	feature.EnabledValue = "men:\n  - John Smith\n  - Bill Jones\nwomen:\n  - Mary Smith\n  - Susan Williams"
+	feature.DisabledValue = "key:value"
+	if !reflect.DeepEqual(feature.GetCurrentValue("entityId123", entityMap), feature.GetEnabledValue()) {
+		t.Error("Expected TestFeatureGetCurrentValueStringYAML test case to pass")
 	}
 	feature.DataType = "NUMERIC"
+	feature.Format = ""
 	feature.EnabledValue = float64(1)
 	feature.DisabledValue = float64(0)
 	if feature.GetCurrentValue("entityID123", entityMap) != float64(1) {
@@ -168,6 +193,9 @@ func TestProperty(t *testing.T) {
 	if property.GetPropertyDataType() != "BOOLEAN" {
 		t.Error("Expected TestPropertyGetPropertyDataType test case to pass")
 	}
+	if property.GetPropertyDataFormat() != "" {
+		t.Error("Expected TestPropertyGetPropertyDataFormat test case to pass")
+	}
 	if property.GetValue() != true {
 		t.Error("Expected TestPropertyGetValue test case to pass")
 	}
@@ -180,11 +208,27 @@ func TestProperty(t *testing.T) {
 		t.Error("Expected TestPropertyGetCurrentValueBoolean test case to pass")
 	}
 	property.DataType = "STRING"
+	property.Format = "TEXT"
 	property.Value = "Value"
 	if property.GetCurrentValue("entityID123", entityMap) != "Value" {
-		t.Error("Expected TestPropertyGetCurrentValueString test case to pass")
+		t.Error("Expected TestPropertyGetCurrentValueStringText test case to pass")
+	}
+	property.DataType = "STRING"
+	property.Format = "JSON"
+	propertyValueJSON := make(map[string]interface{})
+	propertyValueJSON["key"] = "property value"
+	property.Value = propertyValueJSON
+	if !reflect.DeepEqual(property.GetCurrentValue("entityId123", entityMap), propertyValueJSON) {
+		t.Error("Expected TestPropertyGetCurrentValueStringJson test case to pass")
+	}
+	property.DataType = "STRING"
+	property.Format = "YAML"
+	property.Value = "men:\n  - John Smith\n  - Bill Jones\nwomen:\n  - Mary Smith\n  - Susan Williams"
+	if !reflect.DeepEqual(property.GetCurrentValue("entityId123", entityMap), property.GetValue()) {
+		t.Error("Expected TestPropertyGetCurrentValueStringYaml test case to pass")
 	}
 	property.DataType = "NUMERIC"
+	property.Format = ""
 	property.Value = float64(1)
 	if property.GetCurrentValue("entityID123", entityMap) != float64(1) {
 		t.Error("Expected TestPropertyGetCurrentValueNumeric test case to pass")

@@ -31,6 +31,7 @@ type Feature struct {
 	Name          string        `json:"name"`
 	FeatureID     string        `json:"feature_id"`
 	DataType      string        `json:"type"`
+	Format        string        `json:"format"`
 	EnabledValue  interface{}   `json:"enabled_value"`
 	DisabledValue interface{}   `json:"disabled_value"`
 	SegmentRules  []SegmentRule `json:"segment_rules"`
@@ -44,11 +45,17 @@ func (f *Feature) GetFeatureName() string {
 
 // GetDisabledValue : Get Disabled Value
 func (f *Feature) GetDisabledValue() interface{} {
+	if f.Format == "YAML" {
+		return getTypeCastedValue(f.DisabledValue, f.GetFeatureDataType(), f.GetFeatureDataFormat())
+	}
 	return f.DisabledValue
 }
 
 // GetEnabledValue : Get Enabled Value
 func (f *Feature) GetEnabledValue() interface{} {
+	if f.Format == "YAML" {
+		return getTypeCastedValue(f.EnabledValue, f.GetFeatureDataType(), f.GetFeatureDataFormat())
+	}
 	return f.EnabledValue
 }
 
@@ -60,6 +67,16 @@ func (f *Feature) GetFeatureID() string {
 // GetFeatureDataType : Get Feature Data Type
 func (f *Feature) GetFeatureDataType() string {
 	return f.DataType
+}
+
+// GetFeatureDataFormat : Get Feature Data Format
+func (f *Feature) GetFeatureDataFormat() string {
+	// Format will be empty string ("") for Boolean & Numeric feature flags
+	// If the Format is empty for a String type, we default it to TEXT
+	if f.Format == "" && f.DataType == "STRING" {
+		f.Format = "TEXT"
+	}
+	return f.Format
 }
 
 // IsEnabled : Is Enabled
@@ -82,7 +99,7 @@ func (f *Feature) GetCurrentValue(entityID string, entityAttributes map[string]i
 
 	if f.isFeatureValid() {
 		val := f.featureEvaluation(entityID, entityAttributes)
-		return getTypeCastedValue(val, f.GetFeatureDataType())
+		return getTypeCastedValue(val, f.GetFeatureDataType(), f.GetFeatureDataFormat())
 	}
 	return nil
 }

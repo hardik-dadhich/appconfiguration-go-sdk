@@ -37,14 +37,14 @@ const CollectionIDError = "Invalid action. You can perform this action only afte
 // CollectionInitError : CollectionInitError const
 const CollectionInitError = "Invalid action. You can perform this action only after a successful initialization and setting the context. Check the Init and SetContext section for errors."
 
-// ConfigurationFileNotFoundError : ConfigurationFileNotFoundError const
-const ConfigurationFileNotFoundError = "Provide configuration_file value when live_config_update_enabled is false."
+// BootstrapFileNotFoundError : BootstrapFileNotFoundError const
+const BootstrapFileNotFoundError = "Provide bootstrap_file value when live_config_update_enabled is false."
 
 // IncorrectUsageOfContextOptions : IncorrectUsageOfContextOptions const
 const IncorrectUsageOfContextOptions = "Incorrect usage of context options. At most of one ContextOptions struct should be passed."
 
 // ConfigAPIError : ConfigAPIError const
-const ConfigAPIError = "Invalid configuration. Verify the collectionId, environmentId, apikey, guid and region."
+const ConfigAPIError = "Failed to fetch the configurations"
 
 // FetchFromAPISdkInitError : FetchFromAPISdkInitError const
 const FetchFromAPISdkInitError = "fetchFromAPI() - Configuration SDK not initialized with call to init."
@@ -175,11 +175,11 @@ const SettingContext = "Setting context."
 // LoadingData : LoadingData const
 const LoadingData = "Loading data."
 
-// CheckConfigurationFileProvided : CheckConfigurationFileProvided const
-const CheckConfigurationFileProvided = "Checking configuration file is provided by the user or not."
+// CheckBootstrapFileProvided : CheckBootstrapFileProvided const
+const CheckBootstrapFileProvided = "Checking bootstrap file is provided by the user or not."
 
-// ConfigurationFileProvided : ConfigurationFileProvided const
-const ConfigurationFileProvided = "User provided configuration file."
+// BootstrapFileProvided : BootstrapFileProvided const
+const BootstrapFileProvided = "User provided bootstrap file."
 
 // LoadingConfigurations : LoadingConfigurations const
 const LoadingConfigurations = "Loading configurations."
@@ -208,6 +208,9 @@ const RetryWebSocketConnect = "Trying web socket connection again."
 // UnmarshalJSONErr : UnmarshalJSONErr const
 const UnmarshalJSONErr = "Error while unmarshalling JSON "
 
+// UnmarshalYAMLErr : UnmarshalYAMLErr const
+const UnmarshalYAMLErr = "Error while unmarshalling YAML "
+
 // MarshalJSONErr : MarshalJSONErr const
 const MarshalJSONErr = "Error while marshalling JSON "
 
@@ -216,3 +219,18 @@ const SetInMemoryCache = "Setting memory cache."
 
 // ConfigurationFileEmpty : ConfigurationFileEmpty const
 const ConfigurationFileEmpty = " file is empty."
+
+// InitError : Caused due to initialization error
+const InitError = "error: configurations not fetched, check the init and setcontext section for errors"
+
+// InvalidDataType : Invalid Datatype
+const InvalidDataType = "Invalid datatype: "
+
+// InvalidDataFormat : Invalid Data Format
+const InvalidDataFormat = "Invalid data format"
+
+// TypeCastingError : Type Casting Error
+const TypeCastingError = "Error Type casting. Check the feature or property values."
+
+// ContextOptionsParameterDeprecation = Deprecation message
+const ContextOptionsParameterDeprecation = "Deprecated: With v0.2.1 the existing method of passing ConfigurationFile will be deprecated & removed from v0.3.0 \nUse BootstrapFile parameter instead."

@@ -17,38 +17,28 @@
 package utils
 
 import (
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
 
 func TestFileManager(t *testing.T) {
-	// TestStoreFilesWithValidContentJSON
-	// StoreFiles("{}")
 
-	// TestStoreFilesWithInValidContentJSON
-	// StoreFiles("")
+	mockLogger()
 
-	// TestStoreFilesWithoutWritePermission
-	var path = "test.txt"
-	os.Create(path)
-	os.WriteFile(path, []byte("{}"), 0777)
-	os.Chmod(path, 444)
-	// StoreFiles(path)
+	// TestStoreFilesWithValidJSONContent
+	StoreFiles(`{"key":"value"}`, "")
+	assert.EqualValues(t,
+		string(ReadFiles(constants.ConfigurationFile)), "{\n\t\"key\": \"value\"\n}")
+	os.Remove(constants.ConfigurationFile)
 
-	// TestStoreFilesWithoutWritePermission
-	os.Create(path)
-	os.WriteFile(path, []byte("{}"), 0777)
-	os.Chmod(path, 444)
-	// StoreFiles(path)
+	// TestStoreFilesWithInvalidJSONContent
+	StoreFiles("", "")
+	if hook.LastEntry().Message != "AppConfiguration - Error while encoding json json: error calling MarshalJSON for type json.RawMessage: unexpected end of JSON input" {
+		t.Errorf("Test failed: StoreFiles for Invalid json")
+	}
 
-	// TestReadFilesFileDoesNotExist
-	ReadFiles(path)
-
-	// TestReadFilesFilePathEmpty
-	ReadFiles("")
-
-	// TestReadFilesFileExist
-	os.Create(path)
-	ReadFiles(path)
-	os.Remove(path)
+	// TestReadFilesWithNonExistingFile
+	assert.Equal(t, ReadFiles("non-existing-file.txt"), []byte(`{}`))
 }

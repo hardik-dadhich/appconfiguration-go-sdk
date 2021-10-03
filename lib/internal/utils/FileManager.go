@@ -17,12 +17,29 @@
 package utils
 
 import (
-	messages "github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
-
-	"io/ioutil"
-
+	"encoding/json"
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/constants"
+	"github.com/IBM/appconfiguration-go-sdk/lib/internal/messages"
 	"github.com/IBM/appconfiguration-go-sdk/lib/internal/utils/log"
+	"io/ioutil"
+	"path"
 )
+
+// StoreFiles : Store Files
+func StoreFiles(content, filePath string) {
+	log.Debug(messages.StoreFile)
+
+	file, err := json.MarshalIndent(json.RawMessage(content), "", "\t")
+	if err != nil {
+		log.Error(messages.EncodeJSONErr, err)
+		return
+	}
+	err = ioutil.WriteFile(path.Join(filePath, constants.ConfigurationFile), file, 0644)
+	if err != nil {
+		log.Error(messages.WriteFileErr, err)
+		return
+	}
+}
 
 // ReadFiles reads file from the file path
 func ReadFiles(filePath string) []byte {

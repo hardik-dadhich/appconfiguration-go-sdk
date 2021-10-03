@@ -25,7 +25,7 @@ properties for distributed applications centrally.
 
 ## Installation
 
-The current version of this SDK: 0.1.1
+The current version of this SDK: 0.2.1
 
 There are a few different ways to download and install the IBM App Configuration Go SDK project for use by your Go
 application:
@@ -74,24 +74,46 @@ appConfiguration.SetContext(collectionId, environmentId)
 * collectionId: Id of the collection created in App Configuration service instance under the **Collections** section.
 * environmentId: Id of the environment created in App Configuration service instance under the **Environments** section.
 
-> Here, by default live update from the server is enabled. To turn off this mode see the [below section](#work-offline-with-local-configuration-file-optional)
+### (Optional)
 
-### Work offline with local configuration file (Optional)
-
-You can also work offline with local configuration file and perform feature and property related operations.
-
-After [`appConfiguration.Init("region", "guid", "apikey")`](#using-the-sdk), follow the below steps
+In order for your application and SDK to continue its operations even during the unlikely scenario of App Configuration
+service across your application restarts, you can configure the SDK to work using a persistent cache. The SDK uses the
+persistent cache to store the App Configuration data that will be available across your application restarts.
 
 ```go
-appConfiguration.SetContext("airlines-webapp", "dev", AppConfiguration.ContextOptions{
-  ConfigurationFile:       "saflights/flights.json",
-  LiveConfigUpdateEnabled: false
+// 1. default (without persistent cache)
+appConfiguration.SetContext(collectionId, environmentId)
+
+// 2. with persistent cache
+appConfiguration.SetContext(collectionId, environmentId, AppConfiguration.ContextOptions{
+    PersistentCacheDirectory: "/var/lib/docker/volumes/",
 })
 ```
 
-- ConfigurationFile: Path to the JSON file, which contains configuration details.
-- LiveConfigUpdateEnabled: Set this value to `false` if the new configuration values shouldn't be fetched from the
-  server. Make sure to provide a proper JSON file in the path. By default, this value is enabled.
+* PersistentCacheDirectory: Absolute path to a directory which has read & write permission for the user. The SDK will
+  create a file - `AppConfiguration.json` in the specified directory, and it will be used as the persistent cache to
+  store the App Configuration service information.
+
+When persistent cache is enabled, the SDK will keep the last known good configuration at the persistent cache. In the
+case of App Configuration server being unreachable, the latest configurations at the persistent cache is loaded to the
+application to continue working.
+
+### (Optional)
+
+The SDK is also designed to serve configurations, perform feature flag & property evaluations without being connected to
+App Configuration service.
+
+```go
+appConfiguration.SetContext(collectionId, environmentId, AppConfiguration.ContextOptions{
+    BootstrapFile: "saflights/flights.json",
+    LiveConfigUpdateEnabled: false,
+})
+```
+
+* BootstrapFile: Absolute path of the JSON file, which contains configuration details. Make sure to provide a proper
+  JSON file. You can generate this file using `ibmcloud ac config` command of the IBM Cloud App Configuration CLI.
+* LiveConfigUpdateEnabled: Live configuration update from the server. Set this value to `false` if the new configuration
+  values shouldn't be fetched from the server. By default, this value is enabled.
 
 ## Get single feature
 
@@ -113,13 +135,15 @@ if err == nil {
 ## Get all features
 
 ```go
-features := appConfiguration.GetFeatures()
-feature := features["online-check-in"]
-
-fmt.Println("Feature Name", feature.GetFeatureName())
-fmt.Println("Feature Id", feature.GetFeatureID())
-fmt.Println("Feature Type", feature.GetFeatureDataType())
-fmt.Println("Feature is enabled", feature.IsEnabled())
+features, err := appConfiguration.GetFeatures()
+if err == nil {
+    feature := features["online-check-in"]
+    
+    fmt.Println("Feature Name", feature.GetFeatureName())
+    fmt.Println("Feature Id", feature.GetFeatureID())
+    fmt.Println("Feature Type", feature.GetFeatureDataType())
+    fmt.Println("Feature is enabled", feature.IsEnabled())
+}
 ```
 
 ## Evaluate a feature
@@ -151,12 +175,14 @@ if err == nil {
 ## Get all properties
 
 ```go
-properties := appConfiguration.GetProperties()
-property := properties["check-in-charges"]
-
-fmt.Println("Property Name", property.GetPropertyName())
-fmt.Println("Property Id", property.GetPropertyID())
-fmt.Println("Property Type", property.GetPropertyDataType())
+properties, err := appConfiguration.GetProperties()
+if err == nil {
+    property := properties["check-in-charges"]
+    
+    fmt.Println("Property Name", property.GetPropertyName())
+    fmt.Println("Property Id", property.GetPropertyID())
+    fmt.Println("Property Type", property.GetPropertyDataType())
+}
 ```
 
 ## Evaluate a property
@@ -173,6 +199,73 @@ entityAttributes["country"] = "India"
 
 propertyVal := property.GetCurrentValue(entityId, entityAttributes)
 ```
+
+## Supported Data types
+
+App Configuration service allows to configure the feature flag and properties in the following data types : Boolean,
+Numeric, String. The String data type can be of the format of a text string , JSON or YAML. The SDK processes each
+format accordingly as shown in the below table.
+<details><summary>View Table</summary>
+
+| **Feature or Property value**                                                                                      | **DataType** | **DataFormat** | **Type of data returned <br> by `GetCurrentValue()`** | **Example output**                                                   |
+| ------------------------------------------------------------------------------------------------------------------ | ------------ | -------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| `true`                                                                                                             | BOOLEAN      | not applicable | `bool`                                                | `true`                                                               |
+| `25`                                                                                                               | NUMERIC      | not applicable | `float64`                                             | `25`                                                                 |
+| "a string text"                                                                                                    | STRING       | TEXT           | `string`                                              | `a string text`                                                      |
+| <pre>{<br>  "firefox": {<br>    "name": "Firefox",<br>    "pref_url": "about:config"<br>  }<br>}</pre> | STRING       | JSON           | `map[string]interface{}`                              | `map[browsers:map[firefox:map[name:Firefox pref_url:about:config]]]` |
+| <pre>men:<br>  - John Smith<br>  - Bill Jones<br>women:<br>  - Mary Smith<br>  - Susan Williams</pre>  | STRING       | YAML           | `map[string]interface{}`                              | `map[men:[John Smith Bill Jones] women:[Mary Smith Susan Williams]]` |
+</details>
+
+<details><summary>Feature flag</summary>
+
+  ```go
+feature, err := appConfiguration.GetFeature("json-feature")
+if err == nil {
+    feature.GetFeatureDataType() // STRING
+    feature.GetFeatureDataFormat() // JSON
+    
+    // Example (traversing the returned map)
+    result := feature.GetCurrentValue(entityID, entityAttributes) // JSON value is returned as a Map
+    result.(map[string]interface{})["key"] // returns the value of the key
+}
+
+feature, err := appConfiguration.GetFeature("yaml-feature")
+if err == nil {
+    feature.GetFeatureDataType() // STRING
+    feature.GetFeatureDataFormat() // YAML
+    
+    // Example (traversing the returned map)
+    result := feature.GetCurrentValue(entityID, entityAttributes) // YAML value is returned as a Map
+    result.(map[string]interface{})["key"] // returns the value of the key
+}
+  ```
+
+</details>
+<details><summary>Property</summary>
+
+  ```go
+property, err := appConfiguration.GetProperty("json-property")
+if err == nil {
+    property.GetPropertyDataType() // STRING
+    property.GetPropertyDataFormat() // JSON
+
+    // Example (traversing the returned map)
+    result := property.GetCurrentValue(entityID, entityAttributes) // JSON value is returned as a Map
+    result.(map[string]interface{})["key"] // returns the value of the key
+}
+
+property, err := appConfiguration.GetProperty("yaml-property")
+if err == nil {
+    property.GetPropertyDataType() // STRING
+    property.GetPropertyDataFormat() // YAML
+
+    // Example (traversing the returned map)
+    result := property.GetCurrentValue(entityID, entityAttributes) // YAML value is returned as a Map
+    result.(map[string]interface{})["key"] // returns the value of the key
+}
+  ```
+
+</details>
 
 ## Set listener for feature or property data changes
 

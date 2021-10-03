@@ -73,7 +73,7 @@ func TestSetContext(t *testing.T) {
 	}
 	reset(ac)
 
-	// when collection id and environment id is provided successfully.
+	// when collection id and environment id is provided successfully. (in-memory cache)
 	ac.Init("a", "b", "c")
 	ac.isInitialized = true
 	assert.Equal(t, false, ac.isInitializedConfig)
@@ -82,38 +82,39 @@ func TestSetContext(t *testing.T) {
 	reset(ac)
 
 	// when collection id and environment id is provided successfully and the number of context options is more than 1
+	F := false
 	ac.Init("a", "b", "c")
 	ac.isInitialized = true
 	ac.SetContext("c1", "dev", ContextOptions{
-		ConfigurationFile:       "saflights/flights.json",
-		LiveConfigUpdateEnabled: false,
+		BootstrapFile:           "saflights/flights.json",
+		LiveConfigUpdateEnabled: &F,
 	}, ContextOptions{
-		ConfigurationFile:       "saflights/flights.json",
-		LiveConfigUpdateEnabled: false,
+		BootstrapFile:           "saflights/flights.json",
+		LiveConfigUpdateEnabled: &F,
 	})
 	if hook.LastEntry().Message != "AppConfiguration - Incorrect usage of context options. At most of one ContextOptions struct should be passed." {
 		t.Errorf("Test failed: Incorrect error message")
 	}
 	reset(ac)
 
-	// when collection id and environment id is provided successfully and the number of context options is 1
+	// when collection id and environment id is provided successfully and the number of context options is 1. (Bootstrap file evaluation)
 	ac.Init("a", "b", "c")
 	ac.isInitialized = true
 	assert.Equal(t, false, ac.isInitializedConfig)
 	ac.SetContext("c1", "dev", ContextOptions{
-		ConfigurationFile:       "saflights/flights.json",
-		LiveConfigUpdateEnabled: false,
+		BootstrapFile:           "saflights/flights.json",
+		LiveConfigUpdateEnabled: &F,
 	})
 	assert.Equal(t, true, ac.isInitializedConfig)
 	reset(ac)
 
-	// when collection id and environment id is provided successfully and the context options has no config file inspite of live update unabled set to false
+	// when collection id and environment id is provided successfully and the context options has no config file inspite of live update enabled set to false
 	ac.Init("a", "b", "c")
 	ac.isInitialized = true
 	assert.Equal(t, false, ac.isInitializedConfig)
 	ac.SetContext("c1", "dev", ContextOptions{
-		ConfigurationFile:       "",
-		LiveConfigUpdateEnabled: false,
+		BootstrapFile:           "",
+		LiveConfigUpdateEnabled: &F,
 	})
 	if hook.LastEntry().Message != "AppConfiguration - Provide configuration_file value when live_config_update_enabled is false." {
 		t.Errorf("Test failed: Incorrect error message")
@@ -140,14 +141,14 @@ func TestGetFeature(t *testing.T) {
 func TestGetFeatures(t *testing.T) {
 	// test get features when not initialised properly
 	ac := GetInstance()
-	features := ac.GetFeatures()
-	assert.Nil(t, features)
+	_, err := ac.GetFeatures()
+	assert.Error(t, err, "Expected GetFeatures to return error")
 	reset(ac)
 
 	// test get features when config has been initialized properly and feature exists in the cache
 	mockInit(ac)
 	mockSetCache(ac)
-	features = ac.GetFeatures()
+	features, err := ac.GetFeatures()
 	if assert.NotNil(t, features) {
 		assert.Equal(t, "discountOnBikes", features["FID1"].Name)
 	}
@@ -171,17 +172,17 @@ func TestGetProperty(t *testing.T) {
 }
 
 func TestGetProperties(t *testing.T) {
-	// test get features when not initialised properly
+	// test get properties when not initialised properly
 	ac := GetInstance()
-	features := ac.GetProperties()
-	assert.Nil(t, features)
+	_, err := ac.GetProperties()
+	assert.Error(t, err, "Expected GetProperties to return error")
 	reset(ac)
-	// test get features when config has been initialized properly and feature exists in the cache
+	// test get properties when config has been initialized properly and property exists in the cache
 	mockInit(ac)
 	mockSetCache(ac)
-	features = ac.GetProperties()
-	if assert.NotNil(t, features) {
-		assert.Equal(t, "nodeReplica", features["PID1"].Name)
+	properties, err := ac.GetProperties()
+	if assert.NotNil(t, properties) {
+		assert.Equal(t, "nodeReplica", properties["PID1"].Name)
 	}
 	reset(ac)
 }

@@ -31,73 +31,87 @@ type Property struct {
 	Name         string        `json:"name"`
 	PropertyID   string        `json:"property_id"`
 	DataType     string        `json:"type"`
+	Format       string        `json:"format"`
 	Value        interface{}   `json:"value"`
 	SegmentRules []SegmentRule `json:"segment_rules"`
 }
 
 // GetPropertyName : Get Property Name
-func (f *Property) GetPropertyName() string {
-	return f.Name
+func (p *Property) GetPropertyName() string {
+	return p.Name
 }
 
 // GetPropertyID : Get Property Id
-func (f *Property) GetPropertyID() string {
-	return f.PropertyID
+func (p *Property) GetPropertyID() string {
+	return p.PropertyID
 }
 
 // GetPropertyDataType : Get Property Data Type
-func (f *Property) GetPropertyDataType() string {
-	return f.DataType
+func (p *Property) GetPropertyDataType() string {
+	return p.DataType
+}
+
+// GetPropertyDataFormat : Get Property Data Format
+func (p *Property) GetPropertyDataFormat() string {
+	// Format will be empty string ("") for Boolean & Numeric properties
+	// If the Format is empty for a String type, we default it to TEXT
+	if p.Format == "" && p.DataType == "STRING" {
+		p.Format = "TEXT"
+	}
+	return p.Format
 }
 
 // GetValue : Get Value
-func (f *Property) GetValue() interface{} {
-	return f.Value
+func (p *Property) GetValue() interface{} {
+	if p.Format == "YAML" {
+		return getTypeCastedValue(p.Value, p.GetPropertyDataType(), p.GetPropertyDataFormat())
+	}
+	return p.Value
 }
 
 // GetSegmentRules : Get Segment Rules
-func (f *Property) GetSegmentRules() []SegmentRule {
-	return f.SegmentRules
+func (p *Property) GetSegmentRules() []SegmentRule {
+	return p.SegmentRules
 }
 
 // GetCurrentValue : Get Current Value
-func (f *Property) GetCurrentValue(entityID string, entityAttributes map[string]interface{}) interface{} {
+func (p *Property) GetCurrentValue(entityID string, entityAttributes map[string]interface{}) interface{} {
 	log.Debug(messages.RetrievingProperty)
 	if len(entityID) <= 0 {
 		log.Error(messages.SetEntityObjectIDError)
 		return nil
 	}
 
-	if f.isPropertyValid() {
-		val := f.propertyEvaluation(entityID, entityAttributes)
-		return getTypeCastedValue(val, f.GetPropertyDataType())
+	if p.isPropertyValid() {
+		val := p.propertyEvaluation(entityID, entityAttributes)
+		return getTypeCastedValue(val, p.GetPropertyDataType(), p.GetPropertyDataFormat())
 	}
 	return nil
 }
 
-func (f *Property) isPropertyValid() bool {
-	return !(f.Name == "" || f.PropertyID == "" || f.DataType == "" || f.Value == nil)
+func (p *Property) isPropertyValid() bool {
+	return !(p.Name == "" || p.PropertyID == "" || p.DataType == "" || p.Value == nil)
 }
 
-func (f *Property) propertyEvaluation(entityID string, entityAttributes map[string]interface{}) interface{} {
+func (p *Property) propertyEvaluation(entityID string, entityAttributes map[string]interface{}) interface{} {
 
 	var evaluatedSegmentID string = constants.DefaultSegmentID
 	defer func() {
-		utils.GetMeteringInstance().RecordEvaluation("", f.GetPropertyID(), entityID, evaluatedSegmentID)
+		utils.GetMeteringInstance().RecordEvaluation("", p.GetPropertyID(), entityID, evaluatedSegmentID)
 	}()
 
 	log.Debug(messages.EvaluatingProperty)
 	defer utils.GracefullyHandleError()
 
 	if len(entityAttributes) < 0 {
-		log.Debug(f.GetValue())
-		return f.GetValue()
+		log.Debug(p.GetValue())
+		return p.GetValue()
 	}
 
-	if len(f.GetSegmentRules()) > 0 {
+	if len(p.GetSegmentRules()) > 0 {
 
 		var rulesMap map[int]SegmentRule
-		rulesMap = f.parseRules(f.GetSegmentRules())
+		rulesMap = p.parseRules(p.GetSegmentRules())
 
 		// sort the map elements as per ascending order of keys
 
@@ -112,12 +126,12 @@ func (f *Property) propertyEvaluation(entityID string, entityAttributes map[stri
 			segmentRule := rulesMap[k]
 			for _, rule := range segmentRule.GetRules() {
 				for _, segmentKey := range rule.Segments {
-					if f.evaluateSegment(string(segmentKey), entityAttributes) {
+					if p.evaluateSegment(string(segmentKey), entityAttributes) {
 						evaluatedSegmentID = segmentKey
 						if segmentRule.GetValue() == "$default" {
 							log.Debug(messages.PropertyValue)
-							log.Debug(f.GetValue())
-							return f.GetValue()
+							log.Debug(p.GetValue())
+							return p.GetValue()
 						}
 						log.Debug(messages.PropertyValue)
 						log.Debug(segmentRule.GetValue())
@@ -127,11 +141,11 @@ func (f *Property) propertyEvaluation(entityID string, entityAttributes map[stri
 			}
 		}
 	} else {
-		return f.GetValue()
+		return p.GetValue()
 	}
-	return f.GetValue()
+	return p.GetValue()
 }
-func (f *Property) parseRules(segmentRules []SegmentRule) map[int]SegmentRule {
+func (p *Property) parseRules(segmentRules []SegmentRule) map[int]SegmentRule {
 	log.Debug(messages.ParsingPropertyRules)
 	defer utils.GracefullyHandleError()
 	var rulesMap map[int]SegmentRule
@@ -142,7 +156,7 @@ func (f *Property) parseRules(segmentRules []SegmentRule) map[int]SegmentRule {
 	log.Debug(rulesMap)
 	return rulesMap
 }
-func (f *Property) evaluateSegment(segmentKey string, entityAttributes map[string]interface{}) bool {
+func (p *Property) evaluateSegment(segmentKey string, entityAttributes map[string]interface{}) bool {
 	log.Debug(messages.EvaluatingSegments)
 	segment, ok := GetCacheInstance().SegmentMap[segmentKey]
 	if ok {
